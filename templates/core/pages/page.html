@@ -1,0 +1,30 @@
+{% extends "core/public_base.html" %}
+{% load it42 %}
+{% comment %}
+Static text page (Static Site MD templates): rendered from templates/core/pages/<slug>.md
+by catalog.views.text_page. ``toc`` lists the level-2 headings for "On this page";
+``notice`` (the Notice: header) shows the warning banner above the article.
+{% endcomment %}
+{% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="it-container">
+  <header class="it-text-hero">
+    {% if eyebrow %}<span class="it-pill">{{ eyebrow }}</span>{% endif %}
+    <h1>{{ title }}</h1>
+    {% if lead %}<p>{{ lead }}</p>{% endif %}
+    <p class="it-text-updated">{% if updated %}Last updated {{ updated }} <span aria-hidden="true">·</span> {% endif %}{{ read_minutes }} min read</p>
+  </header>
+  <div class="it-text-grid">
+    <nav class="it-toc" aria-labelledby="toc-title">
+      {% if toc %}
+        <h2 id="toc-title">On this page</h2>
+        <ul>{% for item in toc %}<li><a href="#{{ item.id }}">{{ item.name }}</a></li>{% endfor %}</ul>
+      {% endif %}
+    </nav>
+    <article class="it-article">
+      {% if notice %}<p class="it-notice" role="note">{% icon "warning-circle" %}<span>{{ notice }}</span></p>{% endif %}
+      {{ body|safe }}
+    </article>
+  </div>
+</div>
+{% endblock %}

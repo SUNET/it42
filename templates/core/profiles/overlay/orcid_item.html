@@ -1,0 +1,19 @@
+{% load it42 %}{# Edit one staged ORCID item on its section's form before it is added. #}
+<div class="it-overlay">
+  <div class="it-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1" data-close="{% url 'profile' %}#item-{{ item.n }}">
+    <header class="it-dialog-head">
+      <span class="it-dialog-icon" aria-hidden="true">{% icon "pencil-simple" %}</span>
+      <div>
+        <h2 id="dialog-title">Edit before adding</h2>
+        <p>{{ item_section.title }}: {{ item.summary }}. Your version is kept: later ORCID syncs will not change it.</p>
+      </div>
+    </header>
+    <form method="post" action="{% url 'orcid_item_edit' job.public_id item.n %}" novalidate>{% csrf_token %}
+      {% with form=item_form %}{% include "includes/form_fields.html" %}{% endwith %}
+      <div class="it-modal-actions">
+        <a class="btn btn-white" href="{% url 'profile' %}#item-{{ item.n }}">Back to the review</a>
+        <button class="btn btn-applicant" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,75 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% comment %}
+Published grants (Dashboard / Granter – Published grants): one card per open or closed
+grant with its application counts and each review panel's progress (assessments in out
+of assigned). "Eligible" counts the applications that passed organisation sign-off.
+{% endcomment %}
+{% block title %}Published grants · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">Published</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Published grants</h1>
+    <p>Every grant that is open or closed, with its applications and review panels. Open a grant to compare its applicants.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    <span class="it-sort-label">Sort by</span>
+    <nav class="it-segments" aria-label="Sort the grants">
+      <a href="?sort=recent"{% if sort == "recent" %} aria-current="true"{% endif %}>{% icon "clock" %}Recent</a>
+      <a href="?sort=deadline"{% if sort == "deadline" %} aria-current="true"{% endif %}>{% icon "hourglass" %}Expiring</a>
+    </nav>
+    {% if next_deadline %}<span class="it-chip-box"><span class="it-diamond" aria-hidden="true"></span>Next deadline · {{ next_deadline|date:"j M Y" }}</span>{% endif %}
+    {% if is_org_admin %}<a class="btn btn-primary" href="{% url 'grant_create' %}">{% icon "plus" %}New grant</a>{% endif %}
+  </div>
+</div>
+
+<section class="it-band" aria-labelledby="published-title">
+  <div class="it-band-head">
+    <span class="it-column-dot" aria-hidden="true"></span>
+    <h2 id="published-title">Grant published</h2>
+    <span class="it-count">{{ cards|length }}</span>
+    <p class="it-band-meta">{{ totals.applications }} application{{ totals.applications|pluralize }} · {{ totals.panels }} review panel{{ totals.panels|pluralize }}</p>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'home' %}">Back to board</a>
+  </div>
+  <ul class="it-grant-cards">
+    {% for card in cards %}
+      {% with grant=card.grant %}
+      <li class="it-grant-panel">
+        <div class="it-grant-panel-top">
+          {% if grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}
+          {% if grant.today_count %}<span class="it-pill-today">+{{ grant.today_count }} today</span>{% endif %}
+          <span class="it-meta ms-auto">{% icon "calendar-blank" %}{% if grant.status == "closed" %}Closed{% else %}Closes{% endif %} {{ grant.deadline|date:"j M" }}</span>
+        </div>
+        <div>
+          <h3>{{ grant.title }}</h3>
+          <p class="it-grant-panel-sub">Grant call · {{ ORG_NAME }}</p>
+        </div>
+        <dl class="it-big-tiles">
+          <div><dt>Applications</dt><dd>{{ grant.application_count }}</dd></div>
+          <div><dt>Eligible</dt><dd>{{ grant.eligible_count }}</dd><small>passed sign-off</small></div>
+          <div><dt>Reviewed</dt><dd>{{ card.reviewed }}</dd><small>all reviews in</small></div>
+        </dl>
+        <div>
+          <h4 class="it-label">Reviewer panels</h4>
+          {% for p in card.panels %}
+            <div class="it-panel-progress">
+              <div class="it-bar-row"><strong>{{ p.panel.name }}</strong><span class="it-meta">{{ p.reviewers }} reviewer{{ p.reviewers|pluralize }} · {{ p.percent }}%</span></div>
+              <div class="it-bar" role="progressbar" aria-label="{{ p.panel.name }}: assessments in" aria-valuenow="{{ p.percent }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ p.percent }}%"></span></div>
+            </div>
+          {% empty %}
+            <p class="it-meta mb-0">No review panel handles this grant yet.</p>
+          {% endfor %}
+        </div>
+        <div class="it-grant-panel-foot">
+          <span class="it-meta">{{ card.reviewers }} reviewer{{ card.reviewers|pluralize }} · sign-off by {{ grant.signature_deadline|date:"j M" }}</span>
+          <a class="it-panel-card-open" href="{% url 'grant_applications' grant.pk %}">Open grant {% icon "arrow-right" %}</a>
+        </div>
+      </li>
+      {% endwith %}
+    {% empty %}
+      <li class="it-column-empty">No published grants yet.{% if is_org_admin %} <a href="{% url 'grant_create' %}">Create a grant</a> and publish it.{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% load it42 %}{% comment %}
+ORCID import / Review data. Rows already on the CV are greyed; new and changed rows can be
+edited (✎), left out (🗑) or put back (✓). Done writes the included rows; Cancel discards
+the import. Each button is a small form, so this works without JavaScript.
+{% endcomment %}
+<div class="it-overlay">
+  <div class="it-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1">
+    <header class="it-dialog-head">
+      <span class="it-orcid-badge it-orcid-badge-lg" aria-hidden="true">iD</span>
+      <div>
+        <h2 id="dialog-title">Review your ORCID data</h2>
+        <p>We found {{ job.items|length }} item{{ job.items|length|pluralize }} on orcid.org/{{ job.orcid }}. Confirm, edit or remove each new item before it's added to your profile.</p>
+      </div>
+    </header>
+    {% if review_fills %}<p class="it-info-line">{% icon "info" %}Also fills your empty details: {{ review_fills|join:", " }}.</p>{% endif %}
+    {% for group in groups %}
+      <section class="it-review-group" aria-labelledby="group-{{ group.section.key }}">
+        <div class="it-review-group-head"><h3 class="it-label" id="group-{{ group.section.key }}">{{ group.section.title }}</h3><small>{{ group.count }} found{% if group.more %} · {{ group.items|length }} shown{% endif %}</small></div>
+        <ul class="it-review-list">
+          {% for item in group.items %}{% include "core/profiles/_review_item.html" %}{% endfor %}
+        </ul>
+        {% if group.more %}
+          <details class="it-review-more">
+            <summary>Show all {{ group.count }} {{ group.section.title|lower }}</summary>
+            <ul class="it-review-list">
+              {% for item in group.more %}{% include "core/profiles/_review_item.html" %}{% endfor %}
+            </ul>
+          </details>
+        {% endif %}
+      </section>
+    {% empty %}
+      <p class="it-card-note">The record has no activities we can add to a CV.</p>
+    {% endfor %}
+    {% if job.keywords %}
+      <section class="it-review-group" id="areas-review" aria-labelledby="areas-title">
+        <div class="it-review-group-head"><h3 class="it-label" id="areas-title">Research areas</h3><small>From your ORCID keywords</small></div>
+        <ul class="it-area-tags">
+          {% for keyword in job.keywords %}
+            <li>
+              <form method="post" action="{% url 'orcid_keyword' job.public_id forloop.counter0 %}">{% csrf_token %}
+                <button class="it-area-toggle" type="submit" aria-pressed="{% if keyword.include %}true{% else %}false{% endif %}">{% if keyword.include %}{% icon "check" %}{% else %}{% icon "plus" %}{% endif %}{{ keyword.text }}</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+    {% if review_adds %}
+      <section class="it-review-group" aria-labelledby="adds-title">
+        <div class="it-review-group-head"><h3 class="it-label" id="adds-title">Added to your profile</h3><small>Updates your public profile</small></div>
+        <ul class="it-tiles it-tiles-3">
+          {% for section, count in review_adds %}<li><strong>+{{ count }}</strong><span>{{ section.title }}</span></li>{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+    <footer class="it-dialog-foot">
+      <span>{{ review_open }} of {{ review_total }} new or changed item{{ review_total|pluralize }} will be added</span>
+      <div class="it-modal-actions">
+        <form method="post" action="{% url 'orcid_cancel' job.public_id %}">{% csrf_token %}
+          <button class="btn btn-white" type="submit">Cancel</button>
+        </form>
+        <form method="post" action="{% url 'orcid_done' job.public_id %}">{% csrf_token %}
+          <button class="btn btn-applicant" type="submit">Done</button>
+        </form>
+      </div>
+    </footer>
+  </div>
+</div>

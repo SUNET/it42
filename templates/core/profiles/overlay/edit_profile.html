@@ -1,0 +1,19 @@
+{% load it42 %}{# Edit profile: name, academic title, ORCID iD and biography. #}
+<div class="it-overlay">
+  <div class="it-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1" data-close="{% url 'profile' %}">
+    <header class="it-dialog-head">
+      <span class="it-dialog-icon" aria-hidden="true">{% icon "pencil-simple" %}</span>
+      <div>
+        <h2 id="dialog-title">Edit profile</h2>
+        <p>What your profile column shows. Contact and identity details are in Personal info.</p>
+      </div>
+    </header>
+    <form method="post" action="{% url 'profile_edit' %}" novalidate>{% csrf_token %}
+      {% include "includes/form_fields.html" %}
+      <div class="it-modal-actions">
+        <a class="btn btn-white" href="{% url 'profile' %}">Cancel</a>
+        <button class="btn btn-applicant" type="submit" name="save_profile">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>

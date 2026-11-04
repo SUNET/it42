@@ -1,0 +1,23 @@
+{% load it42 %}{# A failed import: the runner's message, try again or close. #}
+<div class="it-overlay">
+  <div class="it-dialog it-dialog-sm" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1">
+    <header class="it-dialog-head">
+      <span class="it-orcid-badge it-orcid-badge-lg" aria-hidden="true">iD</span>
+      <div>
+        <h2 id="dialog-title">The import did not finish</h2>
+        <p>orcid.org/{{ job.orcid }}</p>
+      </div>
+    </header>
+    <p class="it-alert-line" role="alert">{% icon "warning-circle" %}{{ job.error }}</p>
+    <p class="it-modal-note">Nothing was changed on your profile.</p>
+    <div class="it-modal-actions">
+      <form method="post" action="{% url 'orcid_cancel' job.public_id %}">{% csrf_token %}
+        <button class="btn btn-white" type="submit">Close</button>
+      </form>
+      <form method="post" action="{% url 'orcid_start' %}">{% csrf_token %}
+        <input type="hidden" name="orcid" value="{{ job.orcid }}">
+        <button class="btn btn-applicant" type="submit">Try again</button>
+      </form>
+    </div>
+  </div>
+</div>

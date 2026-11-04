@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Forbidden · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+  <h1 class="h4">You can't do that</h1>
+  <p class="text-body-secondary">{{ exception|default:"You don't have permission to view this page." }}</p>
+{% endblock %}

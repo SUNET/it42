@@ -1,0 +1,111 @@
+{% extends "core/public_base.html" %}
+{% load it42 %}
+{% block blobs %} it-blobs-home{% endblock %}
+{% block content %}
+<section class="it-hero">
+  <span class="it-eyebrow">For Swedish government research funding</span>
+  <h1 class="it-display">Research funding,<br><span class="it-accent">all in one place.</span></h1>
+  <p class="it-lead">IT42 lets you apply for research funding from Swedish government agencies, manage your grants and review applications, all in one place.</p>
+  <div class="it-buttons">
+    {% if user.is_authenticated %}
+      <a class="btn btn-primary btn-lg" href="{% url 'my_applications' %}">Go to my applications</a>
+      <a class="btn btn-light btn-lg it-glow-applicant" href="{% url 'calls' %}">See open calls</a>
+    {% else %}
+      <a class="btn btn-primary btn-lg" href="{% url 'saml2_login' %}?next={% url 'my_applications' %}">Get Started</a>
+      <a class="btn btn-light btn-lg it-glow-applicant" href="{% url 'saml2_login' %}?next=/">Log in</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="it-container it-funders" data-reveal aria-labelledby="funders-title">
+  <h2 class="it-rule-title" id="funders-title"><span>Used by Swedish research organizations</span></h2>
+  <ul class="it-funder-tiles">
+    {% for f in funders %}<li><a href="{% url 'calls' %}?funder={{ f.slug }}">{{ f.name }}</a></li>{% endfor %}
+  </ul>
+</section>
+
+<section class="it-section" id="about" data-reveal aria-labelledby="about-title">
+  <span class="it-eyebrow">About IT42</span>
+  <h2 class="it-heading" id="about-title">What you can <span class="it-accent">do</span></h2>
+  <p class="it-lead it-lead-wide">IT42 is one system used by several Swedish government research funders. You can use it to apply for funding, manage the grants you have been given, and help review other people’s applications.</p>
+  <ol class="it-container it-number-cards">
+    <li class="it-tint-applicant"><div><span class="it-number">01</span><h3>Apply for funding</h3><p>Find open calls and send your application.</p></div></li>
+    <li class="it-tint-granter"><div><span class="it-number">02</span><h3>Manage your grants</h3><p>Follow payments, reports and deadlines.</p></div></li>
+    <li class="it-tint-reviewer"><div><span class="it-number">03</span><h3>Review applications</h3><p>Score applications in your field.</p></div></li>
+    <li class="it-tint-organization"><div><span class="it-number">04</span><h3>Approve as an organization</h3><p>Check applications from your staff.</p></div></li>
+  </ol>
+</section>
+
+<section class="it-section it-cta-plain" data-reveal aria-labelledby="cta-title">
+  <h2 class="it-subheading" id="cta-title">Not sure which call fits your research?<br>Browse what is open right now.</h2>
+  <a class="btn btn-primary btn-lg" href="{% url 'calls' %}">See open calls</a>
+</section>
+
+<section class="it-section" id="how-it-works" data-reveal aria-labelledby="how-title">
+  <span class="it-eyebrow">How it works</span>
+  <h2 class="it-heading" id="how-title">From sign-up to <span class="it-accent">proposal</span></h2>
+  <p class="it-lead">Getting started takes a few minutes.</p>
+  <ol class="it-container it-steps">
+    <li><div class="it-step-panel it-step-1"><span class="it-icon-box">{% icon "identification-card" %}</span></div><span class="it-tag">Step 1</span><h3>Create your account</h3><p>Choose Join and confirm who you are with Sweden Connect.</p></li>
+    <li><div class="it-step-panel it-step-2"><span class="it-icon-box">{% icon "users-three" %}</span></div><span class="it-tag">Step 2</span><h3>Choose your role</h3><p>Applicant, reviewer, organization or funder. You can add more later.</p></li>
+    <li><div class="it-step-panel it-step-3"><span class="it-icon-box">{% icon "notebook" %}</span></div><span class="it-tag">Step 3</span><h3>Get to work</h3><p>Apply for funding, manage grants or review applications.</p></li>
+  </ol>
+</section>
+
+<section class="it-section" data-reveal aria-labelledby="who-title">
+  <span class="it-eyebrow">Who it’s for</span>
+  <h2 class="it-heading" id="who-title">Built for <span class="it-accent">everyone</span> in the process</h2>
+  <p class="it-lead">Each role sees what matters to them, and everyone is told by email when an application moves on.</p>
+  <div class="it-container it-roles">
+    <div class="it-role-card it-role-researchers"><h3>Researchers</h3><p>Find open calls, write and send applications, and follow each one until there is a decision.</p></div>
+    <div class="it-role-card it-role-reviewers"><h3>Reviewers</h3><p>Get matched to applications in your field, then score them and leave comments in one place.</p></div>
+    <div class="it-role-card it-role-funders"><h3>Funders and organizations</h3><p>Publish calls, choose reviewers and approve applications from your staff before they go forward.</p></div>
+  </div>
+</section>
+
+<section class="it-section" id="open-calls" data-reveal aria-labelledby="open-title">
+  <span class="it-eyebrow">Open calls</span>
+  <h2 class="it-heading" id="open-title">Apply <span class="it-accent">right now</span></h2>
+  <ul class="it-container it-call-rows">
+    {% for grant in grants %}
+      <li>
+        <span class="it-call-date">Closes {{ grant.deadline|date:"j M Y" }}</span>
+        <a class="it-call-title" href="{% url 'grant_detail' grant.org_slug grant.grant_public_id %}">{{ grant.title }}</a>
+        <span class="it-chip">{{ grant.org_name }}</span>
+        {% icon "arrow-square-out" "it-call-arrow" %}
+      </li>
+    {% empty %}
+      <li class="it-call-empty">No open calls right now. New calls show up here as soon as a funder publishes them.</li>
+    {% endfor %}
+  </ul>
+  <a class="it-link" href="{% url 'calls' %}">See all open calls {% icon "arrow-square-out" %}</a>
+</section>
+
+<section class="it-section" id="faq" data-reveal aria-labelledby="faq-title">
+  <span class="it-eyebrow">Questions</span>
+  <h2 class="it-heading" id="faq-title">Good to <span class="it-accent">know</span></h2>
+  <dl class="it-container it-faq">
+    <div class="it-tint-granter"><dt>Who can use IT42?</dt><dd>Researchers, reviewers, organization staff and funders at Swedish government research agencies.</dd></div>
+    <div class="it-tint-applicant"><dt>How do I log in?</dt><dd>With Sweden Connect, using BankID, Freja eID or another approved e-ID.</dd></div>
+    <div class="it-tint-organization"><dt>Does it cost anything?</dt><dd>No. IT42 is free for applicants, reviewers and organizations.</dd></div>
+    <div class="it-tint-granter"><dt>Can I apply to several funders?</dt><dd>Yes. One account works for every funder that uses IT42.</dd></div>
+    <div class="it-tint-applicant"><dt>Can I have more than one role?</dt><dd>Yes. You can apply for one grant and review applications for another.</dd></div>
+    <div class="it-tint-organization"><dt>Who can see my applications?</dt><dd>Only you, your organization and the people handling the call. Nothing in review is public.</dd></div>
+  </dl>
+</section>
+
+{% if not user.is_authenticated %}
+<section class="it-section it-get-started" data-reveal aria-labelledby="start-title">
+  <div class="it-container">
+    <div class="it-start-card">
+      <h2 class="it-heading" id="start-title">Ready to <span class="it-accent">get started?</span></h2>
+      <p class="it-lead">Join with Sweden Connect in a few minutes, or log in if you already have a profile.</p>
+      <div class="it-buttons">
+        <a class="btn btn-primary btn-lg" href="{% url 'saml2_login' %}?next={% url 'my_applications' %}">Join IT42</a>
+        <a class="btn btn-light btn-lg it-glow-organization" href="{% url 'saml2_login' %}?next=/">Log in</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

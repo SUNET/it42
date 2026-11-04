@@ -1,0 +1,65 @@
+{% extends "org/base.html" %}
+{% load static %}
+{% block title %}{% if grant %}Edit {{ grant.title }}{% else %}New grant{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'it42/formbuilder.css' %}">{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">{% if grant %}{{ grant.title }}{% else %}New grant{% endif %}</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>{% if grant %}Edit draft{% else %}New grant{% endif %}</h1>
+    <p>Describe the call and build its application form. Nothing is public until you publish the draft.</p>
+  </div>
+</div>
+  <form method="post" class="it-card" novalidate id="grant-form">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    {% for field in form %}
+      {% if field.name != "form_schema" %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <fieldset class="mb-3">
+      <legend class="form-label fs-6">Application form</legend>
+      <p class="form-text mt-0">Drag widgets from the palette onto the form, or use the Add buttons. Click a field to edit it. The applicant's name and email address and the administrating organisation are always part of the form; you may make the organisation optional (an empty answer skips the organisation's sign-off). Applicants attach PDFs separately.</p>
+      {% for error in form.form_schema.errors %}<div class="alert alert-danger py-2" data-schema-error>{{ error }}</div>{% endfor %}
+
+      <div id="form-builder" class="fb" data-config="builder-config" data-target="{{ form.form_schema.id_for_label }}" hidden>
+        <div class="fb-palette" aria-labelledby="fb-palette-title">
+          <h2 class="h6 mb-2" id="fb-palette-title">Widgets</h2>
+          <div data-palette></div>
+        </div>
+        <div class="fb-canvas-wrap">
+          <h2 class="h6 mb-2">Form <span class="small fw-normal text-body-secondary" data-count></span></h2>
+          <ol class="fb-canvas list-unstyled" data-canvas aria-label="Form fields"></ol>
+          <p class="visually-hidden" aria-live="polite" data-announce></p>
+        </div>
+        <div class="fb-props" aria-labelledby="fb-props-title">
+          <h2 class="h6 mb-2" id="fb-props-title">Field settings</h2>
+          <div data-props><p class="small text-body-secondary mb-0">Select a field on the form to edit it.</p></div>
+        </div>
+      </div>
+
+      <details class="mt-3" id="form-schema-json"{% if form.form_schema.errors %} open{% endif %}>
+        <summary class="small text-body-secondary">Advanced: edit as JSON</summary>
+        <div class="mt-2">
+          <label class="visually-hidden" for="{{ form.form_schema.id_for_label }}">{{ form.form_schema.label }}</label>
+          {{ form.form_schema }}
+          <div class="form-text">{{ form.form_schema.help_text }} Types: text, textarea, email, url, tel, number, integer, date, time, datetime, select, radio, checkboxes, checkbox, heading, paragraph (research_org only for administrating_organisation).</div>
+          <div class="invalid-feedback" data-json-error></div>
+        </div>
+      </details>
+    </fieldset>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Save draft</button>
+      <a class="btn btn-outline-secondary" href="{% url 'grant_list' %}">Cancel</a>
+    </div>
+  </form>
+  {{ builder_config|json_script:"builder-config" }}
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'it42/formbuilder.js' %}"></script>{% endblock %}

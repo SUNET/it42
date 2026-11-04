@@ -1,0 +1,42 @@
+{% load it42 %}{% comment %}
+Profile / Edit data: every CV section with edit, delete and reorder, plus research areas.
+CV rows are saved one by one (entry form, delete button), so the dialog closes with Done.
+{% endcomment %}
+<div class="it-overlay">
+  <div class="it-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1" data-close="{% url 'profile' %}">
+    <header class="it-dialog-head">
+      <span class="it-dialog-icon" aria-hidden="true">{% icon "pencil-simple" %}</span>
+      <div>
+        <h2 id="dialog-title">Edit your profile data</h2>
+        <p>Change, add or remove items on your CV. Changes are saved as you make them.</p>
+      </div>
+    </header>
+    {% if profile.orcid_imported_at %}
+      <div class="it-orcid-note" id="orcid">
+        <span class="it-orcid-badge" aria-hidden="true">iD</span>
+        <span>Items synced from ORCID update on your next sync. Edits you make here are kept.</span>
+        <form method="post" action="{% url 'orcid_clear' %}">{% csrf_token %}
+          <button class="btn btn-sm btn-white" type="submit">Remove untouched imports</button>
+        </form>
+      </div>
+    {% endif %}
+    {% for section, entries in sections %}
+      {% include "core/profiles/_section.html" %}
+    {% endfor %}
+    <section class="it-review-group" id="areas" aria-labelledby="areas-title">
+      <div class="it-review-group-head"><h3 class="it-label" id="areas-title">Research areas</h3><small>Shown as tags on your profile</small></div>
+      <form method="post" action="{% url 'profile_data' %}" novalidate>{% csrf_token %}
+        {% with form=areas_form %}{% include "includes/form_fields.html" %}{% endwith %}
+        <button class="btn btn-sm btn-white" type="submit">Save research areas</button>
+      </form>
+    </section>
+    <section class="it-review-group" aria-labelledby="record-title">
+      <div class="it-review-group-head"><h3 class="it-label" id="record-title">Academic record</h3><small>Calculated from your CV</small></div>
+      <ul class="it-tiles it-tiles-4">{% for tile in tiles %}<li><strong>{{ tile.value }}</strong><span>{{ tile.label }}</span></li>{% endfor %}</ul>
+    </section>
+    <footer class="it-dialog-foot">
+      <span>{% if last_updated %}Last saved {{ last_updated|date:"j M Y" }}{% endif %}</span>
+      <div class="it-modal-actions"><a class="btn btn-applicant" href="{% url 'profile' %}#academic-cv">Done</a></div>
+    </footer>
+  </div>
+</div>

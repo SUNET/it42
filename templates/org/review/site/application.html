@@ -1,0 +1,256 @@
+{% extends "org/review/site/base.html" %}
+{% load static it42 %}
+{% block title %}{{ application.applicant_name }} · {{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">My panels</a></li><li><a href="{% url 'review_panel' panel.pk %}">{{ panel.name }}</a></li><li aria-current="page">{{ application.applicant_name }}</li>{% endblock %}
+{% block content %}
+<div class="it-detail-card">
+  <aside class="it-infobar">
+    <div class="it-stage"><span class="it-stage-dot" aria-hidden="true"></span><span>{% if not seat.reviews %}{{ seat.role_label }}{% elif not assigned %}Not assigned{% elif my_assessment %}Your review · Written{% else %}Your review · To do{% endif %}</span>{% if seat.reviews and tasks.assessment %}<span>· Due {{ tasks.assessment.ends_at|date:"D j M" }}</span>{% endif %}</div>
+    <div>
+      <h1>{{ application.applicant_name }}</h1>
+      <p class="it-infobar-sub">{{ application.grant.title }} · {{ panel.name }}</p>
+    </div>
+
+    {% if seat.reviews %}
+      <section id="declaration" class="it-infobar-section">
+        <h2 class="it-label">Conflict of interest and competence</h2>
+        {% if declaration_form %}
+          <form method="post" action="{% url 'review_declare' panel.pk application.pk %}" class="it-infobar-form">{% csrf_token %}
+            {% with form=declaration_form %}
+              <div class="form-check">
+                {{ form.in_conflict }}
+                <label class="form-check-label" for="{{ form.in_conflict.id_for_label }}">{{ form.in_conflict.label }}</label>
+              </div>
+              <div>
+                <label class="form-label" for="{{ form.conflict_reason.id_for_label }}">Reason (if in conflict)</label>
+                {{ form.conflict_reason }}
+                {% for error in form.conflict_reason.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div>
+                <label class="form-label" for="{{ form.competence.id_for_label }}">My competence on this topic</label>
+                {{ form.competence }}
+              </div>
+            {% endwith %}
+            <button class="btn btn-light" type="submit">Save declaration</button>
+          </form>
+          <p class="it-infobar-hint">Open until {{ tasks.conflict.ends_at|date:"j M Y, H:i" }}. If you declare a conflict, {{ ORG_NAME }} decides whether to take you off this application.</p>
+        {% else %}
+          {% if my_declaration %}
+            <p class="it-infobar-value" data-my-declaration>{% if my_declaration.in_conflict %}<span class="it-status it-status-red">Conflict</span> {{ my_declaration.conflict_reason }}{% else %}<span class="it-status it-status-green">No conflict</span>{% endif %} · competence {{ my_declaration.competence_label|lower }}</p>
+          {% else %}<p class="it-infobar-value">Not declared.</p>{% endif %}
+          <p class="it-infobar-hint">{% if not assigned %}You are not assigned to this application.{% elif not tasks.conflict %}The panel has no conflict-of-interest task yet.{% elif tasks.conflict.state_now == 'upcoming' %}Opens {{ tasks.conflict.starts_at|date:"j M Y, H:i" }}.{% else %}The task closed {{ tasks.conflict.ends_at|date:"j M Y, H:i" }}.{% endif %}</p>
+        {% endif %}
+      </section>
+
+      <section id="assessment" class="it-infobar-section">
+        <h2 class="it-label">My assessment and preliminary statement</h2>
+        {% if assessment_form %}
+          <form method="post" action="{% url 'review_assess' panel.pk application.pk %}" class="it-infobar-form">{% csrf_token %}
+            {% with form=assessment_form %}
+              {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+              {% include "org/review/_grade.html" with field=form.preliminary_grade label=form.preliminary_grade.label %}
+              {% for field in form %}{% if field.name != "preliminary_grade" %}
+                <div>
+                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+                  {{ field }}
+                  {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+              {% endif %}{% endfor %}
+            {% endwith %}
+            <button class="btn btn-primary" type="submit">Save assessment</button>
+          </form>
+          <p class="it-infobar-hint">Only you can see this until {{ tasks.assessment.ends_at|date:"j M Y, H:i" }}; after that the whole panel can, and it can no longer be changed.</p>
+        {% elif my_assessment %}
+          <div data-my-assessment class="it-infobar-value">
+            <p class="mb-1"><span class="it-score">{{ my_assessment.preliminary_grade }}<small>/10</small></span> preliminary grade</p>
+            <p class="mb-1">{{ my_assessment.assessment|linebreaksbr }}</p>
+            <p class="mb-1"><em>Preliminary statement:</em> {{ my_assessment.preliminary_statement|linebreaksbr }}</p>
+          </div>
+          <p class="it-infobar-hint">{% if review.shared %}Review done; shared with the panel.{% else %}Not writable right now.{% endif %}</p>
+        {% else %}
+          <p class="it-infobar-hint">{% if not assigned %}You are not assigned to this application.{% elif review.shared %}The review has ended.{% elif not tasks.assessment %}The panel has no assessment task yet.{% elif tasks.assessment.starts_at > now %}Opens {{ tasks.assessment.starts_at|date:"j M Y, H:i" }}.{% else %}The assessment deadline ({{ tasks.assessment.ends_at|date:"j M Y, H:i" }}) has passed.{% endif %}</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    <div class="it-infobar-block">
+      <h2 class="it-label">Details</h2>
+      <dl class="it-kv">
+        <div><dt>Applicant</dt><dd><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ application.applicant_name|initials }}</span>{{ application.applicant_name }}</dd></div>
+        <div><dt>Email</dt><dd>{{ application.applicant_email|default:"—" }}</dd></div>
+        <div><dt>Submitted</dt><dd>{{ application.submitted_at|date:"j M Y" }}</dd></div>
+        {% if tasks.assessment %}<div><dt>Review due</dt><dd>{{ tasks.assessment.ends_at|date:"D j M Y" }}</dd></div>{% endif %}
+        {% if seat.reviews %}<div><dt>Conflict of interest</dt><dd>{% if not my_declaration %}<span class="it-tag-soft">Not declared</span>{% elif my_declaration.in_conflict %}<span class="it-status it-status-red">Declared</span>{% else %}<span class="it-status it-status-green">None declared</span>{% endif %}</dd></div>{% endif %}
+      </dl>
+    </div>
+  </aside>
+
+  <div class="it-detail-main" data-tabs>
+    <ul class="it-tabs" role="tablist">
+      <li><a href="#proposal" role="tab" aria-selected="true">Proposal</a></li>
+      <li><a href="#grant" role="tab">Grant details</a></li>
+      <li><a href="#panel" role="tab">Panel reviews{% if not review.shared %} <span class="it-tab-count">· hidden</span>{% endif %}</a></li>
+      {% if declarations %}<li><a href="#declarations" role="tab">Declarations <span class="it-tab-count">{{ declarations|length }}</span></a></li>{% endif %}
+      {% if show_final %}<li><a href="#final-statement" role="tab">Final statement</a></li>{% endif %}
+      <li><a href="#notes" role="tab">My notes{% if notes %} <span class="it-tab-count">{{ notes|length }}</span>{% endif %}</a></li>
+    </ul>
+
+    <section class="it-tabpanel" id="proposal" role="tabpanel" aria-label="Proposal">
+      <div class="it-detail-body">
+        <div class="it-stack">
+          <div class="it-about-grant">
+            <span class="it-label mb-0">About the grant</span>
+            <h2>{{ application.grant.title }}</h2>
+            <p>{{ application.grant.description|truncatewords:60 }}</p>
+            <div class="it-facts-row"><span class="it-fact">Closes  {{ application.grant.deadline|date:"j M Y" }}</span><span class="it-fact">{{ ORG_NAME }}</span></div>
+          </div>
+          <div class="it-block">
+            <h2>Application</h2>
+            <dl class="it-answers">
+              {% for label, value in answers %}<dt>{{ label }}</dt><dd>{{ value|default:"—"|linebreaksbr }}</dd>{% endfor %}
+            </dl>
+          </div>
+        </div>
+        <div>
+          <div class="it-side-card">
+            <h2>Attachments</h2>
+            <ul class="it-files">
+              {% for doc in documents %}
+                <li>{% icon "file-pdf" %}<span><a href="{% url 'review_document' panel.pk application.pk doc.pk %}">{{ doc.original_name }}</a></span><small>{{ doc.size|filesizeformat }}</small></li>
+              {% empty %}
+                <li class="it-files-empty">None attached.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="it-side-card">
+            <h2>Grades</h2>
+            <p class="it-card-note mb-0">Grade each application from 0 (does not meet the call) to 10 (exceeds it on every point). Your grade and assessment stay private until the assessment deadline.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="it-tabpanel" id="grant" role="tabpanel" aria-label="Grant details">
+      <div class="it-detail-body">
+        <div class="it-stack">
+          <div class="it-about-grant">
+            <span class="it-label mb-0">The call</span>
+            <h2>{{ application.grant.title }}</h2>
+            <p>{{ application.grant.description|linebreaksbr }}</p>
+            <div class="it-facts-row"><span class="it-fact">{{ ORG_NAME }}</span><span class="it-fact">Call closes  {{ application.grant.deadline|date:"j M Y" }}</span></div>
+          </div>
+          <div class="it-block">
+            <h2>What you score</h2>
+            <dl class="it-sums">
+              <div><dt>Preliminary grade<br><span class="it-meta">How well the application meets the call</span></dt><dd>0–10</dd></div>
+              <div><dt>Assessment<br><span class="it-meta">Your reasoning, in your own words</span></dt><dd>Text</dd></div>
+              <div><dt>Preliminary statement<br><span class="it-meta">What you tell the panel</span></dt><dd>Text</dd></div>
+            </dl>
+          </div>
+          <div class="it-block">
+            <h2>Review rules</h2>
+            <ul class="it-rules">
+              <li>Declare any conflict of interest before you start.</li>
+              <li>Grade each application from 0 (does not meet the call) to 10 (exceeds it on every point).</li>
+              <li>Don't share the application outside the panel.</li>
+              <li>Other reviewers' assessments stay hidden until the assessment deadline, and so does yours.</li>
+            </ul>
+          </div>
+          <div class="it-block">
+            <h2>Key dates</h2>
+            <ol class="it-key-dates">
+              {% for d in key_dates %}<li{% if d.now %} class="is-current"{% endif %}><time datetime="{{ d.day|date:'Y-m-d' }}">{{ d.day|date:"j M Y" }}</time><span>{{ d.text }}</span>{% if d.now %}<span class="it-now">Now</span>{% endif %}</li>{% endfor %}
+            </ol>
+          </div>
+        </div>
+        <div>
+          <div class="it-side-card">
+            <h2>Panel contact</h2>
+            <div class="it-people-row"><span class="it-feed-avatar" aria-hidden="true">{{ ORG_NAME|initials }}</span><div><strong>{{ ORG_NAME }}</strong><span>{{ panel.name }}</span></div></div>
+            <p class="it-card-note">Ask the funder about scoring or conflicts of interest.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="it-tabpanel" id="panel" role="tabpanel" aria-label="Panel reviews">
+      {% if review.shared %}
+        <div class="it-block" id="panel-assessments">
+          <h2>Panel assessments</h2>
+          {% include "org/review/_assessments.html" with assessments=other_assessments %}
+        </div>
+      {% else %}
+        <div class="it-private">
+          <span class="it-private-icon">{% icon "eye-slash" %}</span>
+          <strong>Reviews are private{% if tasks.assessment %} until {{ tasks.assessment.ends_at|date:"D j M" }}{% endif %}</strong>
+          <p>You can't see the other reviewers' assessments yet, and they can't see yours. This keeps every review independent.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    {% if declarations %}
+      <section class="it-tabpanel" id="declarations" role="tabpanel" aria-label="Declarations">
+        <div class="it-block">
+          <h2>Declarations of the panel</h2>
+          {% include "org/review/_declarations.html" with assigned=review.assigned %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if show_final %}
+      <section class="it-tabpanel" id="final-statement" role="tabpanel" aria-label="Final statement">
+        <div class="it-block">
+          <h2>Final statement</h2>
+          {% if final_form %}
+            <form method="post" action="{% url 'review_final' panel.pk application.pk %}" class="it-final-form">{% csrf_token %}
+              {% if final_form.non_field_errors %}<div class="alert alert-danger">{{ final_form.non_field_errors|join:" " }}</div>{% endif %}
+              {% for label, text, grade in final_form.sections %}
+                <fieldset class="it-final-section">
+                  <legend>{{ label }}</legend>
+                  <label class="visually-hidden" for="{{ text.id_for_label }}">{{ label }}</label>{{ text }}
+                  {% for error in text.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  {% include "org/review/_grade.html" with field=grade label=grade.label %}
+                </fieldset>
+              {% endfor %}
+              <div><button class="btn btn-primary" type="submit">Save final statement</button></div>
+            </form>
+            <p class="it-card-note mt-2">Open until {{ tasks.final.ends_at|date:"j M Y, H:i" }}. Visible to the whole panel and to {{ ORG_NAME }}.</p>
+          {% else %}
+            {% include "org/review/_final_statement.html" with final=review.final %}
+            {% if seat.is_chair %}<p class="it-card-note mt-2">The final-statement task closed {{ tasks.final.ends_at|date:"j M Y, H:i" }}.</p>{% endif %}
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+    <section class="it-tabpanel" id="notes" role="tabpanel" aria-label="My notes">
+      <div class="it-detail-body">
+        <div class="it-stack">
+          <form method="post" action="{% url 'review_note' panel.pk application.pk %}" class="it-composer">{% csrf_token %}
+            <label class="visually-hidden" for="note-text">Private note</label>
+            <textarea class="form-control" id="note-text" name="text" rows="1" maxlength="5000" required placeholder="Add a private note…"></textarea>
+            <button class="btn btn-primary" type="submit">Save note</button>
+          </form>
+          <ol class="it-my-notes">
+            {% for note in notes %}
+              <li data-my-note>
+                <p>{{ note.text|linebreaksbr }}</p>
+                <div><time datetime="{{ note.created_at|date:'c' }}">{{ note.created_at|date:"j M Y, H:i" }}</time>
+                  <form method="post" action="{% url 'review_note_delete' panel.pk application.pk note.pk %}">{% csrf_token %}<button class="it-icon-btn it-icon-btn-danger" type="submit" aria-label="Delete this note">{% icon "trash" %}</button></form></div>
+              </li>
+            {% empty %}
+              <li class="it-files-empty">No notes yet.</li>
+            {% endfor %}
+          </ol>
+        </div>
+        <div>
+          <div class="it-side-card">
+            <h2>Only you can see these</h2>
+            <p class="it-card-note">Notes aren't shared with the panel, the funder or the applicant. Put anything the panel should read in your preliminary statement.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'it42/tabs.js' %}"></script>{% endblock %}

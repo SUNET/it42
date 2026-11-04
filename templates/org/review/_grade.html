@@ -1,0 +1,11 @@
+{# A 0-10 grade as a row of radio buttons (Card detail / Reviewer); expects `field` (a bound grade field) and `label`. #}
+<fieldset class="it-grade">
+  <legend>{{ label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</legend>
+  <div class="it-grade-scale">
+    {% for n in grade_values %}
+      <input type="radio" class="btn-check" name="{{ field.html_name }}" id="{{ field.auto_id }}_{{ n }}" value="{{ n }}"{% if field.value|stringformat:"s" == n|stringformat:"s" %} checked{% endif %}{% if field.field.required %} required{% endif %}>
+      <label for="{{ field.auto_id }}_{{ n }}">{{ n }}</label>
+    {% endfor %}
+  </div>
+  {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+</fieldset>

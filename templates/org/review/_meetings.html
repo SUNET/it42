@@ -1,0 +1,27 @@
+{# Meeting list; expects `meetings`, `panel`, `can_edit`, `edit_url`, `delete_url`. #}
+{% load it42 %}
+{% if meetings %}
+  <ul class="list-unstyled mb-0">
+    {% for meeting in meetings %}
+      <li class="it-list-row" data-meeting>
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <div><strong>{{ meeting.title }}</strong></div>
+            <div class="it-meta">{% icon "calendar-blank" %}{{ meeting.starts_at|date:"D j M Y, H:i" }}{% if meeting.ends_at %}–{{ meeting.ends_at|date:"H:i" }}{% endif %}{% if meeting.location %} · {{ meeting.location }}{% endif %}</div>
+            {% if meeting.notes %}<div class="small text-body-secondary">{{ meeting.notes|linebreaksbr }}</div>{% endif %}
+          </div>
+          {% if can_edit %}
+            <div class="d-flex gap-1 flex-shrink-0">
+              <a class="it-icon-btn" href="{% url edit_url panel.pk meeting.pk %}">Edit</a>
+              <form method="post" action="{% url delete_url panel.pk meeting.pk %}">{% csrf_token %}
+                <button class="it-icon-btn it-icon-btn-danger" type="submit" aria-label="Delete {{ meeting.title }}">Delete</button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-body-secondary mb-0">No meetings scheduled.</p>
+{% endif %}

@@ -1,0 +1,19 @@
+{% load it42 %}
+{% comment %}
+The administrating organisation's sign-off on the FO's card detail: waiting, signed,
+declined or expired. The decision comes from the RO zone (signature.granted/declined).
+{% endcomment %}
+<div class="it-signoff it-signoff-{{ application.status }}" data-signoff="{{ application.status }}">
+  <h2 class="it-label">Organisation sign-off</h2>
+  {% if application.status == "awaiting_signature" %}
+    <p><span class="it-signoff-icon">{% icon "hourglass" %}</span><span>Waiting for <strong>{{ application.research_org|research_org_name }}</strong> to sign, by {{ application.grant.signature_deadline|date:"j M Y" }}. Review starts once it is signed.</span></p>
+  {% elif application.status == "ro_declined" %}
+    <p><span class="it-signoff-icon">{% icon "x" %}</span><span><strong>{{ application.research_org|research_org_name }}</strong> declined{% if application.signed_by %} ({{ application.signed_by }}){% endif %} on {{ application.signed_at|date:"j M Y" }}.</span></p>
+    {% if application.signature_note %}<blockquote class="it-signoff-note">{{ application.signature_note|linebreaksbr }}</blockquote>{% endif %}
+  {% elif application.status == "ro_expired" %}
+    <p><span class="it-signoff-icon">{% icon "warning-circle" %}</span><span><strong>{{ application.research_org|research_org_name }}</strong> did not sign by {{ application.grant.signature_deadline|date:"j M Y" }}.</span></p>
+  {% else %}
+    <p><span class="it-signoff-icon">{% icon "seal-check" %}</span><span>Signed by <strong>{{ application.signed_by }}</strong> for {{ application.research_org|research_org_name }} on {{ application.signed_at|date:"j M Y" }}.</span></p>
+    {% if application.signature_note %}<blockquote class="it-signoff-note">{{ application.signature_note|linebreaksbr }}</blockquote>{% endif %}
+  {% endif %}
+</div>

@@ -1,0 +1,13 @@
+{% extends "ro/base.html" %}
+{% load it42 %}
+{% block title %}No organisation · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li aria-current="page">Access</li>{% endblock %}
+{% block content %}
+  <div class="it-gate">
+    <span class="it-banner-icon">{% icon "lock" %}</span>
+    <h1>You do not act for a research organisation</h1>
+    <p>You are logged in as <strong>{{ user.get_full_name|default:user.username }}</strong>
+      ({{ user.email|default:user.sso_subject }}), but no research organisation has added this email address.</p>
+    <p class="it-card-note">Ask your organisation's admin to add the email address you log in with, then log in again.</p>
+  </div>
+{% endblock %}

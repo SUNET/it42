@@ -1,0 +1,38 @@
+{% extends "ro/base.html" %}
+{% load it42 %}
+{% block title %}People · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li>Manage</li><li aria-current="page">People</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>People</h1>
+    <p>Who can sign or decline applications for {{ research_org.name }}. The admin is set by the IT42 deployment; add signers by the email address they log in with.</p>
+  </div>
+</div>
+<div class="it-table-card">
+  <div class="table-responsive">
+    <table class="table it-table align-middle mb-0">
+      <thead><tr><th scope="col">Email</th><th scope="col">Name</th><th scope="col">Role</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+      {% for person in people %}
+        <tr data-person="{{ person.email }}">
+          <td>{{ person.email }}</td>
+          <td>{% if person.user %}{{ person.user }}{% else %}<span class="it-tag-soft">Not logged in yet</span>{% endif %}</td>
+          <td>{{ person.get_role_display }}</td>
+          <td class="text-end">
+            {% if person.role == "signer" %}
+              <form method="post" action="{% url 'people_remove' person.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Remove</button></form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<form method="post" action="{% url 'people_add' %}" class="it-card mt-3" data-add-signer>{% csrf_token %}
+  <label class="form-label fw-semibold mb-0" for="email">Add a signer</label>
+  <input class="form-control" type="email" id="email" name="email" required maxlength="254" placeholder="name@{{ research_org.website|default:'example.org'|cut:'https://'|cut:'http://'|cut:'www.' }}">
+  <div><button class="btn btn-primary" type="submit">{% icon "user-plus" %}Add</button></div>
+</form>
+{% endblock %}

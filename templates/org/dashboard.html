@@ -1,0 +1,113 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% block title %}Grant board · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">Board</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Grant board</h1>
+    <p>Grants on the left, then every application by how far its review has come. Applications naming an administrating organisation wait for its signature first. Applicants see each status change.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    <span class="it-sort-label">Sort by</span>
+    <nav class="it-segments" aria-label="Sort the board">
+      <a href="?sort=recent"{% if sort == "recent" %} aria-current="true"{% endif %}>{% icon "clock" %}Recent</a>
+      <a href="?sort=deadline"{% if sort == "deadline" %} aria-current="true"{% endif %}>{% icon "hourglass" %}Expiring</a>
+    </nav>
+    {% if next_deadline %}<span class="it-chip-box"><span class="it-diamond" aria-hidden="true"></span>Next deadline · {{ next_deadline|date:"j M Y" }}</span>{% endif %}
+    {% if is_org_admin %}<a class="btn btn-primary" href="{% url 'grant_create' %}">{% icon "plus" %}New grant</a>{% endif %}
+  </div>
+</div>
+
+<div class="it-board it-board-7">
+  {% for column in columns %}
+    <section class="it-column it-column-{{ column.key }}" aria-labelledby="col-{{ column.key }}">
+      <div class="it-column-head">
+        <span class="it-column-dot" aria-hidden="true"></span>
+        <h2 id="col-{{ column.key }}">{{ column.title }}</h2>
+        <span class="it-count">{{ column.cards|length }}</span>
+        {% if column.key == "published" %}<a class="it-column-add" href="{% url 'grant_published' %}" aria-label="All published grants" title="All published grants">{% icon "arrow-up-right" %}</a>{% endif %}
+        {% if column.key == "draft" and is_org_admin %}<a class="it-column-add" href="{% url 'grant_create' %}" aria-label="New grant" title="New grant">{% icon "plus" %}</a>{% endif %}
+      </div>
+      <ul class="it-column-list">
+        {% for card in column.cards %}
+          <li>
+          {% if card.grant %}
+            {% with grant=card.grant %}
+            <article class="it-app-card">
+              <div class="it-app-card-top">
+                {% if grant.status == "draft" %}{% include "includes/status_pill.html" with tone="grey" label="Unpublished" %}{% elif grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}
+                {% if grant.today_count %}<span class="it-pill-today">+{{ grant.today_count }} today</span>{% endif %}
+              </div>
+              <h3><a href="{% if grant.status == 'draft' %}{% if is_org_admin %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_list' %}{% endif %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
+              {% if grant.status == "draft" %}
+              <div class="it-app-card-grant">
+                {% icon "hand-coins" %}
+                <div><strong>Grant call</strong><span>{{ ORG_NAME }}</span></div>
+              </div>
+              <div class="it-person"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ grant.created_by.get_full_name|default:grant.created_by.username|initials }}</span>{{ grant.created_by.get_full_name|default:grant.created_by.username }}</div>
+              <div class="it-app-card-foot">
+                <span class="it-meta">{% icon "calendar-blank" %}Closes {{ grant.deadline|date:"j M" }}</span>
+                <span class="it-meta" title="Applications">{% icon "file-text" %}{{ grant.application_count }}</span>
+              </div>
+              {% else %}
+              <p class="it-app-card-sub">Grant call · {{ ORG_NAME }}</p>
+              <dl class="it-tiles">
+                <div><dt>Applications</dt><dd>{{ grant.application_count }}</dd></div>
+                <div><dt>Panels</dt><dd>{{ card.panels }}</dd></div>
+              </dl>
+              <div class="it-app-card-foot">
+                <span class="it-meta">{% icon "calendar-blank" %}{% if grant.status == "closed" %}Closed{% else %}Closes{% endif %} {{ grant.deadline|date:"j M" }}</span>
+                <span class="it-meta">{{ card.reviewers }} reviewer{{ card.reviewers|pluralize }}</span>
+              </div>
+              {% endif %}
+            </article>
+            {% endwith %}
+          {% else %}
+            {% with app=card.application %}
+            <article class="it-app-card">
+              <div class="it-app-card-top">
+                <span data-status="{{ app.status }}">{% status_pill app.status %}</span>
+              </div>
+              <h3><a href="{% url 'application_detail' app.pk %}">{{ app.applicant_name }}</a></h3>
+              <div class="it-app-card-grant">
+                {% icon "hand-coins" %}
+                <div><strong>{{ app.grant.title }}</strong><span>{{ app.applicant_email|default:"Grant call" }}</span></div>
+              </div>
+              {% if app.research_org %}
+                <div class="it-person">{% icon "buildings" %}{{ app.research_org|research_org_name }}</div>
+              {% endif %}
+              {% if app.open_questions %}
+                <div class="it-waiting">{% icon "hourglass" %}<div><strong>Waiting for the applicant</strong><span>{{ app.open_questions }} open question{{ app.open_questions|pluralize }}</span></div></div>
+              {% endif %}
+              <div class="it-app-card-foot">
+                <span class="it-meta">{% icon "calendar-blank" %}{% if column.key == "assigned" %}{{ card.assigned }} reviewer{{ card.assigned|pluralize }}{% elif column.key == "signing" %}Sign by {{ app.grant.signature_deadline|date:"j M" }}{% else %}Received {{ app.received_at|date:"j M" }}{% endif %}</span>
+                <span class="it-meta" title="Questions to the applicant">{% icon "chat-circle" %}{{ app.question_count }}</span>
+              </div>
+            </article>
+            {% endwith %}
+          {% endif %}
+          </li>
+        {% empty %}
+          <li class="it-column-empty">{% if column.key == "draft" %}No drafts.{% if is_org_admin %} <a href="{% url 'grant_create' %}">Create a grant</a>.{% endif %}{% elif column.key == "published" %}No published grants yet.{% else %}Nothing here.{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block panel %}
+<aside class="it-panel" aria-label="Notifications and calendar">
+  <section>
+    <h2>Notifications</h2>
+    <ul class="it-notes">
+      {% for note in feed %}
+        <li><span class="it-note-icon">{% icon note.icon %}</span><div><a href="{% url 'application_detail' note.application.pk %}">{{ note.text }}</a><time datetime="{{ note.when|date:'c' }}">{{ note.when|timesince }} ago</time></div></li>
+      {% empty %}
+        <li class="it-notes-empty">New applications and answers from applicants show up here.</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% include "org/_agenda.html" %}
+</aside>
+{% endblock %}

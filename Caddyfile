@@ -1,0 +1,59 @@
+# One site per hostname under IT42_DOMAIN (default it42.vr; set in .env).
+# IT42_TLS picks the certificates: local_tls (default) uses the mkcert certificate from
+# scripts/make-certs.sh; public_tls lets Caddy get Let's Encrypt certificates, for a
+# server whose names are in public DNS with ports 80 and 443 reachable.
+{
+	admin localhost:2019
+}
+
+(local_tls) {
+	tls /certs/it42.pem /certs/it42-key.pem
+}
+
+(public_tls) {
+	# Automatic HTTPS: nothing to configure.
+}
+
+{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy core-web:8000
+}
+
+fo1.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o1-web:8000
+}
+
+fo2.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o2-web:8000
+}
+
+fo1-review.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o1-review-web:8000
+}
+
+fo2-review.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o2-review-web:8000
+}
+
+ro.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy ro-web:8000
+}
+
+idp.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	# idp2's admin APIs are unauthenticated. SPs are registered from inside the
+	# container (idp/entrypoint.sh), so nothing outside needs them.
+	@admin path /services /services/* /users /users/* /sessions /sessions/* /shortcuts /shortcuts/*
+	respond @admin "Forbidden" 403
+	reverse_proxy idp:8080
+}
+
+mq.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy rabbitmq:15672
+}

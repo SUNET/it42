@@ -1,0 +1,145 @@
+{% extends "org/review/site/base.html" %}
+{% load it42 %}
+{% block title %}{{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">My panels</a></li><li aria-current="page">{{ panel.name }}</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>{{ panel.name }} <span class="it-tag-soft">{{ seat.role_label }}</span></h1>
+    <p>{{ application_count }} application{{ application_count|pluralize }} · {{ reviewers|length }} reviewer{{ reviewers|length|pluralize }} · Chair: {% if chair == "You" %}You{% elif chair %}{{ chair.display_name }}{% else %}not set{% endif %}{% if panel.description %} · {{ panel.description }}{% endif %}</p>
+  </div>
+  {% for row in applications %}{% if forloop.first and row.state.assigned and not row.state.assessed %}
+    <div class="it-toolbar-actions"><a class="btn btn-primary" href="{% url 'review_application' panel.pk row.application.pk %}">Continue reviewing {% icon "caret-right" %}</a></div>
+  {% endif %}{% endfor %}
+</div>
+
+<div class="it-phase{% if shared %} it-phase-shared{% endif %}">
+  <span class="it-banner-icon">{% if shared %}{% icon "users-three" %}{% else %}{% icon "lock" %}{% endif %}</span>
+  <div class="it-banner-text">
+    {% if shared %}
+      <strong>Panel review</strong>
+      <span>All assessments in this panel are visible to its members{% if panel.review_closed_at %}; {{ ORG_NAME }} ended the review on {{ panel.review_closed_at|date:"j M Y, H:i" }}{% endif %}. They can no longer be changed.</span>
+    {% else %}
+      <strong>Private review</strong>
+      <span>Only you can see your assessments.{% if assessment %} The panel sees them from {{ assessment.ends_at|date:"D j M, H:i" }}.{% endif %}</span>
+    {% endif %}
+  </div>
+  <ol class="it-phase-steps">
+    <li{% if not shared %} aria-current="step"{% endif %}><strong>Private review</strong><span>{% if assessment %}{% if shared %}Closed {% else %}Until {% endif %}{{ assessment.ends_at|date:"j M" }}{% else %}No assessment task{% endif %}</span></li>
+    <li{% if shared %} aria-current="step"{% endif %}><strong>Panel review</strong><span>{% if shared %}Now{% elif assessment %}From {{ assessment.ends_at|date:"j M" }}{% else %}After the assessments{% endif %}</span></li>
+  </ol>
+</div>
+
+<div class="it-stats">
+  <section class="it-meeting-card" aria-labelledby="next-meeting">
+    <div class="it-meeting-card-head"><h2 id="next-meeting">Next panel meeting</h2>{% if next_meeting %}<span class="it-when">{{ next_meeting.starts_at|relday }}</span>{% endif %}</div>
+    {% if next_meeting %}
+      <p class="it-meeting-card-when">{{ next_meeting.starts_at|date:"D j M · H:i" }}{% if next_meeting.ends_at %}–{{ next_meeting.ends_at|date:"H:i" }}{% endif %}</p>
+      <p class="it-meeting-card-title">{{ next_meeting.title }}{% if next_meeting.location %} · {{ next_meeting.location }}{% endif %}</p>
+      {% if next_meeting.notes %}<div class="it-agenda"><span>Notes</span>{{ next_meeting.notes|linebreaksbr }}</div>{% endif %}
+    {% else %}
+      <p class="it-meeting-card-title">No meeting is scheduled yet.</p>
+    {% endif %}
+    <span class="it-avatars" aria-hidden="true">{% for m in members|slice:":8" %}<span class="it-avatar it-avatar-sm">{{ m.display_name|initials }}</span>{% endfor %}</span>
+  </section>
+  <dl class="it-stat-tiles">
+    {% if seat.reviews %}
+      <div><dt>My reviews submitted</dt><dd>{{ progress.done }} / {{ progress.mine }}<small>{{ progress.pct }}% done {% icon "check-circle" %}</small></dd></div>
+      <div><dt>Left to score</dt><dd>{{ progress.left }}<small>{% if assessment %}by {{ assessment.ends_at|date:"D j M" }} {% icon "calendar-blank" %}{% else %}no deadline yet{% endif %}</small></dd></div>
+    {% else %}
+      <div><dt>Applications</dt><dd>{{ application_count }}<small>you see them all</small></dd></div>
+      <div><dt>Declarations</dt><dd>{{ progress.declared }}<small>by you</small></dd></div>
+    {% endif %}
+    <div><dt>Panel progress</dt><dd>{{ progress.panel_done }} / {{ progress.panel_total }}<small>{% if shared %}scores shared{% else %}scores hidden{% endif %} {% icon "chart-bar" %}</small></dd></div>
+    <div><dt>{% if shared %}Panel review opened{% else %}Panel review opens{% endif %}</dt><dd>{% if assessment %}{{ assessment.ends_at|date:"D j M" }}{% else %}—{% endif %}<small>{% if assessment and not shared %}{{ assessment.ends_at|relday }} {% icon "lock" %}{% elif shared %}{% icon "eye" %}{% endif %}</small></dd></div>
+  </dl>
+</div>
+
+{% if timeline %}
+<section class="it-card" aria-labelledby="dates-title">
+  <div class="it-card-head"><h2 id="dates-title">Important dates</h2><small>Today · {{ now|date:"D j M Y" }}</small></div>
+  <ol class="it-timeline">
+    {% for item in timeline %}
+      <li class="is-{{ item.state }} it-timeline-{{ item.kind }}"><span class="it-timeline-dot" aria-hidden="true"></span><time datetime="{{ item.when|date:'c' }}">{{ item.when|date:"D j M" }}</time><strong>{{ item.title }}</strong><span>{{ item.detail }}{% if item.state == "next" %} · {{ item.when|relday }}{% endif %}</span></li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+
+<div class="it-review-cols">
+  <section class="it-card" id="applications">
+    <div class="it-card-head">
+      <div><h2>{% if seat.reviews %}My review tasks{% else %}Applications{% endif %} <span class="it-count">{{ applications|length }}</span></h2>
+      <small>{% if seat.sees_all %}As {{ seat.role_label|lower }} you see every application of the panel.{% else %}Assigned to you · to do first{% endif %}</small></div>
+    </div>
+    <div class="table-responsive">
+      <table class="table it-table align-middle mb-0">
+        <thead><tr><th scope="col">Application</th><th scope="col">Conflict / competence</th><th scope="col">Assessment</th><th scope="col">{% if shared %}Panel avg{% else %}Panel scores{% endif %}</th></tr></thead>
+        <tbody>
+        {% for row in applications %}
+          {% with application=row.application state=row.state %}
+          <tr data-application="{{ application.applicant_name }}"{% if state.assigned and not state.assessed %} class="is-todo"{% endif %}>
+            <td><a href="{% url 'review_application' panel.pk application.pk %}">{{ application.applicant_name }}</a><br><span class="it-meta">{{ application.grant.title }}</span></td>
+            <td>{% if not state.assigned %}<span class="text-body-secondary">not assigned</span>{% elif state.declared %}{% include "includes/status_pill.html" with tone="green" label="declared" %}{% else %}{% include "includes/status_pill.html" with tone="peach" label="to do" %}{% endif %}</td>
+            <td>{% if not state.assigned %}<span class="text-body-secondary">not assigned</span>{% elif state.assessed %}<span class="it-score">{{ row.grade }}<small>/10</small></span>{% include "includes/status_pill.html" with tone="green" label="written" %}{% else %}{% include "includes/status_pill.html" with tone="peach" label="to do" %}{% endif %}</td>
+            <td>{% if shared %}{% if row.avg is not None %}<span class="it-score">{{ row.avg|floatformat:1 }}<small> · {{ row.scores|length }} review{{ row.scores|length|pluralize }}</small></span>{% else %}<span class="it-meta">No reviews</span>{% endif %}{% else %}<span class="it-meta">{% icon "eye-slash" %}Hidden</span>{% endif %}</td>
+          </tr>
+          {% endwith %}
+        {% empty %}
+          <tr><td colspan="4" class="it-files-empty">Nothing assigned to you yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <aside class="it-card it-card-tint" aria-labelledby="panel-reviews">
+    <div class="it-card-head"><div><h2 id="panel-reviews">Panel reviews</h2><small>{% if shared %}Latest assessments from the panel{% else %}Hidden until the panel review opens{% endif %}</small></div></div>
+    {% if shared %}
+      {% for a in latest %}
+        <div class="it-review-note">
+          <div class="it-review-note-head"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ a.member.display_name|initials }}</span><div><strong>{{ a.member.display_name }}</strong><span>{{ a.application.applicant_name }} · {{ a.updated_at|timesince }} ago</span></div><span class="it-score">{{ a.preliminary_grade }}<small>/10</small></span></div>
+          <p>{{ a.assessment|truncatewords:40 }}</p>
+        </div>
+      {% empty %}
+        <p class="it-files-empty mb-0">Nobody else has written an assessment.</p>
+      {% endfor %}
+    {% else %}
+      <div class="it-private">
+        <span class="it-private-icon">{% icon "eye-slash" %}</span>
+        <strong>Reviews are private{% if assessment %} until {{ assessment.ends_at|date:"D j M" }}{% endif %}</strong>
+        <p>You can't see the other reviewers' assessments yet, and they can't see yours. This keeps every review independent.</p>
+        <dl class="it-kv">
+          <div><dt>Written by the panel</dt><dd>{{ progress.panel_done }} of {{ progress.panel_total }}</dd></div>
+          {% if seat.reviews %}<div><dt>Your reviews</dt><dd>{{ progress.done }} of {{ progress.mine }}</dd></div>{% endif %}
+          {% if assessment %}<div><dt>Panel review opens</dt><dd>{{ assessment.ends_at|date:"D j M, H:i" }}</dd></div>{% endif %}
+        </dl>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+
+<div class="it-cards-3">
+  <section class="it-card" id="members">
+    <div class="it-card-head"><h2>Panel members</h2><small>{{ members|length }}</small></div>
+    <ul class="it-people">
+      {% for m in members %}<li><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ m.display_name|initials }}</span><span>{{ m.display_name }}</span><small>{{ m.role_label }}</small></li>{% endfor %}
+    </ul>
+  </section>
+  <section class="it-card" id="tasks">
+    <div class="it-card-head">
+      <h2>Tasks</h2>
+      {% if manages_schedule %}<a class="btn btn-sm btn-outline-primary" href="{% url 'review_task_create' panel.pk %}">{% icon "plus" %}Add task</a>{% endif %}
+    </div>
+    {% include "org/review/_tasks.html" with edit_url="review_task_edit" delete_url="review_task_delete" can_edit=manages_schedule %}
+    {% if panel.review_closed_at %}<p class="it-card-note">{{ ORG_NAME }} ended the review on {{ panel.review_closed_at|date:"j M Y, H:i" }}.</p>{% endif %}
+  </section>
+  <section class="it-card" id="meetings">
+    <div class="it-card-head">
+      <h2>Meetings</h2>
+      {% if manages_schedule %}<a class="btn btn-sm btn-outline-primary" href="{% url 'review_meeting_create' panel.pk %}">{% icon "plus" %}Add meeting</a>{% endif %}
+    </div>
+    {% include "org/review/_meetings.html" with edit_url="review_meeting_edit" delete_url="review_meeting_delete" can_edit=manages_schedule %}
+  </section>
+</div>
+{% endblock %}

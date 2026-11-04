@@ -1,0 +1,26 @@
+{% extends "org/review/site/base.html" %}
+{% load it42 %}
+{% block title %}My panels · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">Reviews</a></li><li aria-current="page">My panels</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>My review panels</h1>
+    <p>You sit on {{ cards|length }} panel{{ cards|length|pluralize }} · {{ left }} review{{ left|pluralize }} left to write{% if next_meeting %} · next meeting {{ next_meeting.starts_at|date:"D j M" }}{% endif %}</p>
+  </div>
+</div>
+
+{% if active %}
+  <h2 class="it-section-title">Active <span class="it-count">{{ active|length }}</span></h2>
+  <div class="it-panel-grid">{% for card in active %}{% include "org/review/site/_panel_card.html" %}{% endfor %}</div>
+{% endif %}
+{% if other %}
+  <h2 class="it-section-title">Upcoming &amp; closed <span class="it-count">{{ other|length }}</span></h2>
+  <div class="it-panel-grid">{% for card in other %}{% include "org/review/site/_panel_card.html" %}{% endfor %}</div>
+{% endif %}
+{% endblock %}
+{% block panel %}
+<aside class="it-panel" aria-label="Calendar">
+  {% include "org/_agenda.html" %}
+</aside>
+{% endblock %}

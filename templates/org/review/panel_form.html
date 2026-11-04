@@ -1,0 +1,13 @@
+{% extends "org/base.html" %}
+{% block title %}{% if panel %}Edit {{ panel.name }}{% else %}New panel{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'panel_list' %}">Review panels</a></li>{% if panel %}<li><a href="{% url 'panel_detail' panel.pk %}">{{ panel.name }}</a></li>{% endif %}<li aria-current="page">{% if panel %}Edit{% else %}New panel{% endif %}</li>{% endblock %}
+{% block content %}
+  <div class="it-card" style="max-width: 40rem">
+    <h1 class="it-h1">{% if panel %}Edit panel{% else %}New review panel{% endif %}</h1>
+    <form method="post">{% csrf_token %}
+      {% include "includes/form_fields.html" %}
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a class="btn btn-link" href="{% if panel %}{% url 'panel_detail' panel.pk %}{% else %}{% url 'panel_list' %}{% endif %}">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

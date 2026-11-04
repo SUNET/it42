@@ -1,0 +1,95 @@
+{% extends "core/base.html" %}
+{% load static it42 %}
+{% comment %}
+Static site layout (Static site / Home): blurred colour blobs, floating pill navigation
+and the midnight footer. ``blobs`` picks the background: "home" (four, down the page) or
+the default pair at the top.
+{% endcomment %}
+{% block layout_css %}<link rel="stylesheet" href="{% static 'it42/site.css' %}">{% endblock %}
+{% block body %}
+<div class="it-page">
+  <div class="it-blobs{% block blobs %}{% endblock %}" aria-hidden="true">
+    <span class="it-blob it-blob-magenta"></span><span class="it-blob it-blob-sky"></span>
+    <span class="it-blob it-blob-peach"></span><span class="it-blob it-blob-violet"></span>
+  </div>
+  <header class="it-nav-wrap">
+    <nav class="it-nav" aria-label="Main">
+      <a class="it-logo" href="{% url 'home' %}"><img src="{% static 'it42/logo.svg' %}" alt="" width="20" height="24"><span>IT42</span></a>
+      <ul class="it-nav-links">
+        {% with page=request.resolver_match.kwargs.slug %}
+        <li><a href="{% url 'text_page' 'about' %}"{% if page == 'about' %} aria-current="page"{% endif %}>About</a></li>
+        <li><a href="{% url 'text_page' 'how-it-works' %}"{% if page == 'how-it-works' %} aria-current="page"{% endif %}>How it works</a></li>
+        <li><a href="{% url 'calls' %}"{% if request.resolver_match.url_name == 'calls' or request.resolver_match.url_name == 'grant_detail' %} aria-current="page"{% endif %}>Open calls</a></li>
+        <li><a href="{% url 'text_page' 'help' %}"{% if page == 'help' %} aria-current="page"{% endif %}>Help</a></li>
+        {% endwith %}
+      </ul>
+      <div class="it-nav-actions">
+        {% if user.is_authenticated %}
+          <a class="it-nav-user" href="{% url 'my_applications' %}">
+            <span class="it-avatar" aria-hidden="true">{{ user.get_full_name|default:user.username|initials }}</span>
+            <span class="it-nav-name">{{ user.get_full_name|default:user.username }}</span>
+            <span class="it-role-tag"><span class="it-role-dot" aria-hidden="true"></span>Applicant</span>
+          </a>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+            <button class="it-nav-icon" type="submit" aria-label="Log out" title="Log out">{% icon "sign-out" %}</button>
+          </form>
+        {% else %}
+          <a class="btn btn-light it-glow-applicant" href="{% url 'saml2_login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>
+          <a class="btn btn-primary it-nav-join" href="{% url 'saml2_login' %}?next={% url 'my_applications' %}">Get Started</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+  <main class="it-main">
+    <div class="it-container">{% include "includes/messages.html" %}</div>
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="it-footer">
+    <div class="it-container">
+      <div class="it-footer-top">
+        <div class="it-footer-brand">
+          <a class="it-logo it-logo-light" href="{% url 'home' %}"><img src="{% static 'it42/logo.svg' %}" alt="" width="20" height="24"><span>IT42</span></a>
+        </div>
+        <div class="it-footer-columns">
+          <div>
+            <h2>IT42</h2>
+            <ul>
+              <li><a href="{% url 'text_page' 'about' %}">About</a></li>
+              <li><a href="{% url 'text_page' 'how-it-works' %}">How it works</a></li>
+              <li><a href="{% url 'calls' %}">Open calls</a></li>
+              <li><a href="{% url 'text_page' 'help' %}">Help</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Account</h2>
+            <ul>
+              {% if user.is_authenticated %}
+                <li><a href="{% url 'my_applications' %}">My applications</a></li>
+                <li><a href="{% url 'profile' %}">Profile</a></li>
+              {% else %}
+                <li><a href="{% url 'saml2_login' %}?next={% url 'my_applications' %}">Join</a></li>
+                <li><a href="{% url 'saml2_login' %}?next={{ request.get_full_path|urlencode }}">Log in</a></li>
+              {% endif %}
+              <li><a href="{% url 'text_page' 'help' %}#how-do-i-sign-in">Sweden Connect</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Legal</h2>
+            <ul>
+              <li><a href="{% url 'text_page' 'privacy' %}">Privacy</a></li>
+              <li><a href="{% url 'text_page' 'accessibility' %}">Accessibility</a></li>
+              <li><a href="{% url 'text_page' 'cookies' %}">Cookies</a></li>
+              <li><a href="{% url 'text_page' 'contact' %}">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="it-footer-bottom">
+        <p>© {% now "Y" %} IT42</p>
+        <p>One system for Swedish government research funders</p>
+      </div>
+    </div>
+  </footer>
+</div>
+{% endblock body %}
+{% block extra_scripts %}<script src="{% static 'it42/site.js' %}"></script>{% endblock %}

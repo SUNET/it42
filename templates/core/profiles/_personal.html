@@ -1,0 +1,34 @@
+{% load it42 %}{# Personal info tab (private): read view, or the form with ?edit=personal. #}
+{% if editing_personal %}
+  <p class="it-private-note">{% icon "lock" %}You're editing your personal info. It stays private.</p>
+  <form method="post" action="{% url 'profile' %}#personal" class="it-personal-form" novalidate>{% csrf_token %}
+    {% for title, fields in personal_form.groups %}
+      <h2 class="it-label">{{ title }}</h2>
+      <div class="it-field-grid">{% for field in fields %}{% include "core/profiles/_field.html" %}{% endfor %}</div>
+    {% endfor %}
+    <div class="it-form-actions">
+      <button class="btn btn-applicant" type="submit" name="save_personal">{% icon "check" %}Save changes</button>
+      <a class="btn btn-white" href="{% url 'profile' %}#personal">Cancel</a>
+    </div>
+  </form>
+{% else %}
+  <p class="it-private-note">{% icon "lock" %}Private. Only you can see this. It never appears on your public profile and is not sent with applications.</p>
+  <h2 class="it-label">Contact</h2>
+  <dl class="it-field-grid it-field-box">
+    <div><dt>Home address</dt><dd class="it-pre">{{ profile.address|default:"—" }}</dd></div>
+    <div><dt>Mobile phone</dt><dd>{{ profile.phone|default:"—" }}</dd></div>
+    <div><dt>Telephone</dt><dd>{{ profile.telephone|default:"—" }}</dd></div>
+    <div><dt>Personal email</dt><dd>{{ profile.secondary_email|default:"—" }}</dd></div>
+    <div><dt>Homepage</dt><dd>{% if profile.homepage %}<a href="{{ profile.homepage }}" rel="noopener">{{ profile.homepage }}</a>{% else %}—{% endif %}</dd></div>
+  </dl>
+  <h2 class="it-label">Identity</h2>
+  <dl class="it-field-grid it-field-box">
+    <div><dt>Date of birth</dt><dd>{{ profile.date_of_birth|date:"j F Y"|default:"—" }}</dd></div>
+    <div><dt>Gender</dt><dd>{{ profile.get_gender_display|default:"—" }}</dd></div>
+    <div><dt>Nationality</dt><dd>{{ profile.nationality|default:"—" }}</dd></div>
+    <div><dt>Country of activity</dt><dd>{{ profile.country_of_activity|default:"—" }}</dd></div>
+  </dl>
+  <div class="it-form-actions">
+    <a class="btn btn-applicant" href="{% url 'profile' %}?edit=personal#personal">{% icon "pencil-simple" %}Edit personal info</a>
+  </div>
+{% endif %}

@@ -1,0 +1,64 @@
+{% extends "core/public_base.html" %}
+{% load it42 %}
+{% block title %}Open calls · {{ SITE_NAME }}{% endblock %}
+{% block blobs %} it-blobs-tall{% endblock %}
+{% block content %}
+{% now "Y-m-d" as today_str %}
+<section class="it-section it-hero">
+  <span class="it-eyebrow">Open calls · {{ total }} grant{{ total|pluralize }} accepting applications</span>
+  <h1 class="it-display">Find funding<br><span class="it-accent">that fits you.</span></h1>
+  <p class="it-lead">Every open call from Swedish research funders in one place.</p>
+  <form class="it-search" method="get" action="{% url 'calls' %}" role="search">
+    {% icon "magnifying-glass" %}
+    <label class="visually-hidden" for="calls-q">Search grants, funders or keywords</label>
+    <input id="calls-q" type="search" name="q" value="{{ query }}" placeholder="Search grants, funders or keywords">
+    <label class="visually-hidden" for="calls-funder">Funder</label>
+    <select id="calls-funder" name="funder">
+      <option value="">All funders</option>
+      {% for f in funders %}<option value="{{ f.slug }}"{% if f.slug == funder %} selected{% endif %}>{{ f.name }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-dark" type="submit">Search</button>
+  </form>
+</section>
+
+<div class="it-container it-browse">
+  <ul class="it-chips" aria-label="Funders">
+    <li><a class="it-chip-lg" href="{% url 'calls' %}{% if query %}?q={{ query|urlencode }}{% endif %}"{% if not funder %} aria-current="true"{% endif %}><span class="it-chip-icon">{% icon "squares-four" %}</span>All grants</a></li>
+    {% for f in funders %}
+      <li><a class="it-chip-lg" href="?funder={{ f.slug }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"{% if f.slug == funder %} aria-current="true"{% endif %}><span class="it-chip-icon" style="color: {{ f.color }}">{% icon "buildings" %}</span>{{ f.name }}</a></li>
+    {% endfor %}
+  </ul>
+  <p class="it-results-meta">{{ results|length }} open call{{ results|length|pluralize }}{% if query %} matching “{{ query }}”{% endif %} · Sorted by closing date</p>
+</div>
+
+{% if not filtering %}
+  {% if closing_soon %}
+  <section class="it-container it-card-section" aria-labelledby="closing-title">
+    <div class="it-row-head"><div><h2 id="closing-title">{% icon "hourglass" %}Closing soon</h2><p>Apply before these calls close.</p></div></div>
+    <ul class="it-grant-grid">
+      {% for grant in closing_soon %}<li>{% include "core/catalog/_card.html" with variant="urgent" %}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if new_grants %}
+  <section class="it-container it-card-section" aria-labelledby="new-title">
+    <div class="it-row-head"><div><h2 id="new-title">New grants</h2><p>Calls that opened this week.</p></div></div>
+    <ul class="it-grant-grid">
+      {% for grant in new_grants %}<li>{% include "core/catalog/_card.html" with variant="new" today=today_str %}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+{% endif %}
+
+<section class="it-container it-card-section" aria-labelledby="all-title">
+  <div class="it-row-head"><div><h2 id="all-title">{% if filtering %}Results{% else %}All open calls{% endif %}</h2><p>{% if filtering %}Open calls that match your search.{% else %}Every open call, the one closing first at the top.{% endif %}</p></div></div>
+  <ul class="it-grant-grid">
+    {% for grant in results %}
+      <li>{% include "core/catalog/_card.html" %}</li>
+    {% empty %}
+      <li class="it-results-meta">No open calls{% if filtering %} match your search{% endif %}.</li>
+    {% endfor %}
+  </ul>
+</section>
+<div class="pb-5"></div>
+{% endblock %}

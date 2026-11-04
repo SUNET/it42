@@ -1,0 +1,39 @@
+# The research organisation directory (it42.common.research_orgs). Maintained by the
+# deployment's admins and mounted read-only into every zone; scripts/make-env.sh copies
+# this file to config/research_orgs.toml. Restart the containers after a change.
+#
+# slug: stable id, stored in application answers and events (never change it)
+# kind: university | research_institute
+# admin_email: the organisation's one admin on ro.it42.vr, bound at their login by the
+#   email the IdP sends; the admin adds signers on the site
+# active = false hides the organisation from new applications
+
+[[org]]
+slug = "uu"
+name = "Uppsala University"
+kind = "university"
+country = "SE"
+org_number = "202100-2932"
+website = "https://www.uu.se"
+admin_email = "lena.wikstrom@uu.se"
+active = true
+
+[[org]]
+slug = "kth"
+name = "KTH Royal Institute of Technology"
+kind = "university"
+country = "SE"
+org_number = "202100-3054"
+website = "https://www.kth.se"
+admin_email = "nils.hedlund@kth.se"
+active = true
+
+[[org]]
+slug = "rise"
+name = "RISE Research Institutes of Sweden"
+kind = "research_institute"
+country = "SE"
+org_number = "556464-6874"
+website = "https://www.ri.se"
+admin_email = "eva.strand@ri.se"
+active = true

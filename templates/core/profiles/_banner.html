@@ -1,0 +1,26 @@
+{% load it42 %}{# "Finish your profile" / "Your profile is complete" with the ORCID button. #}
+<div class="it-banner">
+  <span class="it-banner-icon">{% if next_step %}{% icon "list-checks" %}{% else %}{% icon "check-circle" %}{% endif %}</span>
+  <div class="it-banner-text">
+    {% if next_step %}
+      <strong>Finish your profile</strong>
+      <span>Add your ORCID iD and your CV, so funders can assess what you send. Next: {{ next_step.label }}.</span>
+    {% else %}
+      <strong>Your profile is complete</strong>
+      <span>All {{ steps_total }} steps are done. Keep your CV up to date before you apply.</span>
+    {% endif %}
+  </div>
+  <div class="it-banner-progress">
+    <div><span>{{ steps_done }} of {{ steps_total }} steps</span><span>{{ steps_percent }}%</span></div>
+    <div class="it-track" role="progressbar" aria-label="Profile complete" aria-valuenow="{{ steps_percent }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ steps_percent }}%"></span></div>
+  </div>
+  {% if profile.orcid %}
+    <form method="post" action="{% url 'orcid_start' %}">{% csrf_token %}
+      <input type="hidden" name="orcid" value="{{ profile.orcid }}">
+      <button class="btn it-orcid-btn" type="submit"><span class="it-orcid-badge" aria-hidden="true">iD</span>{% if profile.orcid_imported_at %}Sync with ORCID{% else %}Import from ORCID{% endif %}</button>
+    </form>
+  {% else %}
+    <a class="btn it-orcid-btn" href="{% url 'orcid_start' %}"><span class="it-orcid-badge" aria-hidden="true">iD</span>Import from ORCID</a>
+  {% endif %}
+  {% if next_step %}<a class="btn btn-applicant" href="{{ next_step.anchor }}">Finish profile</a>{% endif %}
+</div>

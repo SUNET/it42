@@ -1,0 +1,22 @@
+{# Declarations table; expects `declarations` and `assigned` (list of seats). #}
+{% if assigned %}
+  <p class="small text-body-secondary mb-2">Assigned: {% for m in assigned %}{{ m.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+{% if declarations %}
+  <div class="table-responsive">
+    <table class="table it-table mb-0">
+      <thead><tr><th>Reviewer</th><th>Conflict</th><th>Competence</th></tr></thead>
+      <tbody>
+      {% for d in declarations %}
+        <tr data-declaration="{{ d.member.email }}">
+          <td>{{ d.member.display_name }}</td>
+          <td>{% if d.in_conflict %}<span class="it-status it-status-red">yes</span> {{ d.conflict_reason }}{% else %}<span class="it-status it-status-green">no</span>{% endif %}</td>
+          <td>{{ d.competence_label }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-body-secondary mb-0">No declarations yet.</p>
+{% endif %}

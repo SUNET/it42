@@ -1,0 +1,21 @@
+{% load it42 %}{# CV upload tab: PDFs to attach when applying. Its upload form must stay the last form on /profile/. #}
+<h2 class="it-label">CV upload</h2>
+<ul class="it-files">
+  {% for doc in documents %}
+    <li>
+      {% icon "file-pdf" %}
+      <span>{{ doc.original_name }} <small>{{ doc.size|filesizeformat }} · sha256 <code>{{ doc.sha256|truncatechars:17 }}</code></small></span>
+      <form method="post" action="{% url 'delete_document' doc.pk %}">{% csrf_token %}
+        <button class="it-icon-btn it-icon-btn-danger" type="submit" aria-label="Delete {{ doc.original_name }}">{% icon "trash" %}</button>
+      </form>
+    </li>
+  {% empty %}
+    <li class="it-files-empty">No documents yet.</li>
+  {% endfor %}
+</ul>
+<form method="post" action="{% url 'profile' %}" enctype="multipart/form-data" class="it-dropzone" novalidate>{% csrf_token %}
+  <strong>Upload a CV or another PDF</strong>
+  <span class="it-card-note small">Attach it to an application when you apply. PDF only, up to 5 MB.</span>
+  {% with form=upload %}{% include "includes/form_fields.html" %}{% endwith %}
+  <div><button class="btn btn-applicant" type="submit" name="upload">Upload</button></div>
+</form>

@@ -1,0 +1,56 @@
+{% extends "core/app_base.html" %}
+{% load static it42 %}
+{% comment %}
+Profile / Applicant / Public: a read-only preview of the profile. IT42 does not publish it;
+Personal info never appears here.
+{% endcomment %}
+{% block title %}Public profile · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'profile' %}">Account</a></li><li><a href="{% url 'profile' %}">{{ profile.full_name|default:user.username }}</a></li><li aria-current="page">Public profile</li>{% endblock %}
+{% block content %}
+<div class="it-banner">
+  <span class="it-banner-icon">{% icon "eye" %}</span>
+  <div class="it-banner-text">
+    <strong>This is a preview of your public profile</strong>
+    <span>IT42 does not share it yet: funders see what you send in an application. Personal info never appears here.</span>
+  </div>
+</div>
+
+<div class="it-profile-cols">
+  {% include "core/profiles/_profile_bar.html" with public=True %}
+
+  <section class="it-card it-cv-card" data-tabs aria-label="Public profile">
+    <div class="it-cv-card-head">
+      <ul class="it-tabs" role="tablist">
+        <li><a href="#overview" role="tab" aria-selected="true">Overview</a></li>
+        <li><a href="#academic-cv" role="tab">Academic CV <span class="it-tab-count">{{ rows|length }}</span></a></li>
+        <li><a href="#stats" role="tab">Stats</a></li>
+        <li><a href="#cv" role="tab">CV</a></li>
+      </ul>
+      {% if last_updated %}<small>Last updated {{ last_updated|date:"j M Y" }}</small>{% endif %}
+    </div>
+    <section class="it-tabpanel" id="overview" role="tabpanel" aria-label="Overview">
+      {% include "core/profiles/_overview.html" with public=True %}
+    </section>
+    <section class="it-tabpanel" id="academic-cv" role="tabpanel" aria-label="Academic CV">
+      {% include "core/profiles/_cv_table.html" with public=True %}
+    </section>
+    <section class="it-tabpanel" id="stats" role="tabpanel" aria-label="Stats">
+      {% include "core/profiles/_stats.html" %}
+    </section>
+    <section class="it-tabpanel" id="cv" role="tabpanel" aria-label="CV">
+      <h2 class="it-label">CV</h2>
+      <ul class="it-files">
+        {% for doc in documents %}
+          <li>{% icon "file-pdf" %}<span>{{ doc.original_name }}</span><small>{{ doc.size|filesizeformat }}</small></li>
+        {% empty %}
+          <li class="it-files-empty">No CV uploaded.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'it42/tabs.js' %}"></script>
+<script src="{% static 'it42/profile.js' %}"></script>
+{% endblock %}

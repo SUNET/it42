@@ -1,0 +1,24 @@
+{% load it42 %}{# One row of the ORCID review; expects `job` and `item`. #}
+<li class="it-review-row is-{{ item.state }}{% if item.state != 'on_cv' and not item.include %} is-excluded{% endif %}" id="item-{{ item.n }}">
+  <div class="it-review-text">
+    <strong>{{ item.summary }}</strong>
+    <span>{{ item.details|default:item.dates }}</span>
+  </div>
+  {% if item.state == "on_cv" %}
+    <span class="it-review-chip">{{ item.note }}</span>
+  {% else %}
+    {% if item.edited %}<span class="it-review-chip is-edited">Edited</span>{% elif item.note %}<span class="it-review-chip is-update">{{ item.note }}</span>{% endif %}
+    {% if not item.include %}<span class="it-review-chip">Won't be added</span>{% endif %}
+    <div class="it-review-actions">
+      <a class="it-round-btn" href="{% url 'orcid_item_edit' job.public_id item.n %}" aria-label="Edit {{ item.summary }}">{% icon "pencil-simple" %}</a>
+      <form method="post" action="{% url 'orcid_item' job.public_id item.n %}">{% csrf_token %}
+        <input type="hidden" name="action" value="exclude">
+        <button class="it-round-btn" type="submit" aria-label="Leave out {{ item.summary }}"{% if not item.include %} disabled{% endif %}>{% icon "trash" %}</button>
+      </form>
+      <form method="post" action="{% url 'orcid_item' job.public_id item.n %}">{% csrf_token %}
+        <input type="hidden" name="action" value="include">
+        <button class="it-round-btn it-round-btn-check" type="submit" aria-label="Add {{ item.summary }}" aria-pressed="{% if item.include %}true{% else %}false{% endif %}">{% icon "check" %}</button>
+      </form>
+    </div>
+  {% endif %}
+</li>

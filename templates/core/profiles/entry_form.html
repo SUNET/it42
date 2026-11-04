@@ -1,0 +1,24 @@
+{% extends "core/app_base.html" %}
+{% block title %}{% if entry %}Edit{% else %}Add{% endif %} {{ section.singular }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'profile' %}">Account</a></li><li><a href="{% url 'profile_data' %}#{{ section.key }}">{{ section.title }}</a></li><li aria-current="page">{% if entry %}Edit{% else %}Add{% endif %}</li>{% endblock %}
+{% block content %}
+  <div class="it-toolbar">
+    <div>
+      <h1>{% if entry %}Edit {{ section.singular }}{% else %}Add {{ section.singular }}{% endif %}</h1>
+      <p>{{ section.title }} in your researcher profile.</p>
+    </div>
+  </div>
+  {% if entry and entry.is_imported %}
+    <div class="alert alert-info mb-0">
+      This entry came from ORCID ({{ entry.source_label|lower }}).
+      {% if entry.source == "orcid" %}Saving a change marks it as edited by you, and later ORCID imports will leave it alone.{% else %}ORCID imports no longer change it.{% endif %}
+    </div>
+  {% endif %}
+  <form method="post" class="it-card" style="max-width: 720px" novalidate>{% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <div class="d-flex gap-2">
+      <button class="btn btn-applicant" type="submit">Save</button>
+      <a class="btn btn-light" href="{% url 'profile_data' %}#{{ section.key }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% load it42 %}{# Overview tab: bio, key facts from the CV, research areas. No AI summary (no such data). #}
+{% if profile.bio %}
+  <div class="it-cv-block">
+    <h2 class="it-label">Bio</h2>
+    <p class="it-bio">{{ profile.bio }}</p>
+  </div>
+{% endif %}
+<div class="it-cv-block">
+  <h2 class="it-label">Key facts</h2>
+  {% if facts %}
+    <ul class="it-tiles it-tiles-4">
+      {% for fact in facts %}<li><strong>{{ fact.value }}</strong><span>{{ fact.label }}</span></li>{% endfor %}
+    </ul>
+  {% else %}
+    <p class="it-card-note">Key facts appear here as your CV fills up: your doctorate, publications, grants, supervision and awards.{% if public %}{% else %} <a href="{% url 'profile_data' %}">Add CV data</a> or import it from ORCID.{% endif %}</p>
+  {% endif %}
+</div>
+{% if profile.research_areas %}
+  <div class="it-cv-block">
+    <h2 class="it-label">Research areas</h2>
+    <ul class="it-area-tags">{% for area in profile.research_areas %}<li>{{ area }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+{% if employment %}
+  <div class="it-cv-block">
+    <h2 class="it-label">Current position</h2>
+    <div class="it-org-row">
+      <span class="it-org-icon" aria-hidden="true">{% icon "buildings" %}</span>
+      <div><strong>{{ employment.employer }}</strong><span>{{ employment.details }}</span></div>
+    </div>
+  </div>
+{% endif %}
+{% if rows %}<a class="it-link-arrow" href="#academic-cv">See the full academic CV {% icon "arrow-right" %}</a>{% endif %}

@@ -1,0 +1,11 @@
+{# Stats tab: counts from the CV (ORCID has no citation counts, so none are shown). #}
+<ul class="it-tiles it-tiles-2">
+  {% for tile in tiles %}<li><strong>{{ tile.value }}</strong><span>{{ tile.label }}</span></li>{% endfor %}
+</ul>
+{% if profile.research_areas %}
+  <div class="it-cv-block">
+    <h2 class="it-label">Research areas</h2>
+    <ul class="it-area-tags">{% for area in profile.research_areas %}<li>{{ area }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+<p class="it-card-note small">Counted from your academic CV.{% if profile.orcid_imported_at %} Last synced with ORCID on {{ profile.orcid_imported_at|date:"j M Y" }}.{% endif %}</p>

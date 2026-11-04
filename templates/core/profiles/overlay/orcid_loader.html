@@ -1,0 +1,31 @@
+{% load it42 %}{% comment %}
+ORCID import / Loader: the runner (core-orcid) saves stage and progress;
+static/it42/orcid_import.js polls the status URL and reloads when the review is ready.
+Without JavaScript the page refreshes itself (profile.html).
+{% endcomment %}
+<div class="it-overlay">
+  <div class="it-dialog it-dialog-sm" role="dialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="loader-note" tabindex="-1" data-orcid-import="{% url 'orcid_status' job.public_id %}">
+    <header class="it-dialog-head">
+      <span class="it-orcid-badge it-orcid-badge-lg" aria-hidden="true">iD</span>
+      <div>
+        <h2 id="dialog-title">Importing your ORCID record</h2>
+        <p>orcid.org/{{ job.orcid }}</p>
+      </div>
+    </header>
+    <div class="it-loader">
+      <div class="it-loader-track" role="progressbar" aria-label="Import progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ job.progress }}" data-progressbar>
+        <span style="width: {{ job.progress }}%" data-bar></span>
+      </div>
+      <div class="it-loader-row">
+        <strong data-stage aria-live="polite">{{ stage_text }}</strong>
+        <span data-percent>{{ job.progress }}%</span>
+      </div>
+    </div>
+    <p class="it-modal-note" id="loader-note">This usually takes less than a minute. We read your public record and sort it into your CV sections, and you check everything before it's saved. You can leave this page; the import keeps running.</p>
+    <div class="it-modal-actions">
+      <form method="post" action="{% url 'orcid_cancel' job.public_id %}">{% csrf_token %}
+        <button class="btn btn-white" type="submit">Cancel import</button>
+      </form>
+    </div>
+  </div>
+</div>

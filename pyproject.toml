@@ -1,0 +1,60 @@
+[project]
+name = "it42"
+version = "0.1.0"
+description = "A grant application system."
+authors = [
+    { name = "Kushal Das", email = "kushal@sunet.se" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.1,<6.2",
+    "djangosaml2",
+    "gunicorn>=26.2.0",
+    "markdown>=3.7",
+    "pika>=1.4.4",
+    "psycopg[binary]>=3.3.6",
+    "whitenoise>=6.12.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+djangosaml2 = { git = "https://github.com/kushaldas/djangosaml2", rev = "feat/pygamlastan" }
+
+[dependency-groups]
+dev = [
+    "django-stubs>=6.1.1",
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+    "ruff>=0.16.10",
+    "ty>=0.0.84",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["**/migrations/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "S", "SIM", "RUF"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"scripts/**" = ["S101", "S105", "S310", "S603", "S607"]
+"src/it42/settings/*.py" = ["F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["it42"]
+
+[tool.pytest.ini_options]
+# `uv run pytest` runs the core zone; scripts/test.sh runs both zones.
+DJANGO_SETTINGS_MODULE = "it42.settings.core"
+testpaths = ["tests/core", "tests/common"]
+addopts = "-q"
+filterwarnings = ["ignore:No directory at:UserWarning"]
+
+[tool.ty.environment]
+python = ".venv"

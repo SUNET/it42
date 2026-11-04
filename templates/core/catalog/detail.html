@@ -1,0 +1,108 @@
+{% extends "core/public_base.html" %}
+{% load it42 %}
+{% block title %}{{ grant.title }} · {{ SITE_NAME }}{% endblock %}
+{% block blobs %} it-blobs-tall{% endblock %}
+{% block content %}
+{% with days=grant.deadline|days_until %}
+<div class="it-container it-detail">
+  <ol class="it-breadcrumb">
+    <li><a class="it-back" href="{% url 'calls' %}" aria-label="Back to open calls">{% icon "caret-left" %}</a></li>
+    <li><a href="{% url 'calls' %}">Open calls</a></li>
+    <li><a href="{% url 'calls' %}?funder={{ grant.org_slug }}">{{ grant.org_name }}</a></li>
+    <li aria-current="page">{{ grant.title }}</li>
+  </ol>
+
+  <div class="it-detail-funder">
+    <span class="it-org-tile" style="--org-color: {% org_color grant.org_slug %}">{% icon "buildings" %}</span>
+    <div><strong>{{ grant.org_name }}</strong><span>Research funder</span></div>
+  </div>
+  <div class="it-detail-head">
+    <div>
+      <h1>{{ grant.title }}</h1>
+      <div class="it-detail-pills">
+        {% if is_open %}
+          <span class="it-pill{% if days <= 14 %} it-pill-urgent{% endif %}">{% icon "hourglass" %}{% if days == 0 %}Closes today{% else %}Closes in {{ days }} day{{ days|pluralize }}{% endif %}</span>
+        {% else %}
+          <span class="it-pill">{% icon "lock" %}Closed</span>
+        {% endif %}
+        <span class="it-pill">{% icon "calendar-blank" %}Opened {{ grant.published_at|date:"j M" }}</span>
+      </div>
+    </div>
+    <div class="it-buttons">
+      {% if application %}
+        <a class="btn btn-dark btn-lg" href="{% url 'my_application' application.public_id %}">View your application</a>
+      {% elif is_open and user.is_authenticated %}
+        <a class="btn btn-dark btn-lg" href="{% url 'apply' grant.org_slug grant.grant_public_id %}">{% if draft %}Continue your draft{% else %}Apply now{% endif %}</a>
+      {% elif is_open %}
+        <a class="btn btn-dark btn-lg" href="{% url 'saml2_login' %}?next={{ request.path|urlencode }}">Log in to apply</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="it-detail-grid">
+    <div class="it-detail-body">
+      <section aria-labelledby="about-call">
+        <h2 id="about-call">About this call</h2>
+        <div class="it-prose">{{ grant.description|linebreaks }}</div>
+      </section>
+      {% if grant.form_schema %}
+      <section aria-labelledby="asks-for">
+        <h2 id="asks-for">What the application asks for</h2>
+        <ul class="it-check-rows">
+          {% for f in grant.form_schema %}{% if f.type != "heading" and f.type != "paragraph" %}
+            <li>{% icon "check-circle" %}{{ f.label }}{% if f.required %}<small>Required</small>{% endif %}</li>
+          {% endif %}{% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+      <section aria-labelledby="dates">
+        <h2 id="dates">Important dates</h2>
+        <ol class="it-dates">
+          <li><span class="it-date-dot"></span><div><strong>{{ grant.published_at|date:"j M Y" }}</strong></div><div><strong>Call opens</strong><span>The call was published on IT42.</span></div></li>
+          <li class="it-date-current"><span class="it-date-dot"></span><div><strong>{{ grant.deadline|date:"j M Y" }}</strong></div><div><strong>Call closes</strong><span>Send your application by this date. Late applications can't be sent.</span></div></li>
+        </ol>
+      </section>
+    </div>
+
+    <aside class="it-aside">
+      <div class="it-aside-card">
+        {% if application %}
+          <small>Your application</small>
+          <p class="it-aside-big">{% status_pill application.status %}</p>
+          <p class="mb-0">You applied on {{ application.submitted_at|date:"j F Y" }}.</p>
+        {% else %}
+          <small>Closes</small>
+          <p class="it-aside-big">{{ grant.deadline|date:"j M Y" }}</p>
+        {% endif %}
+        <dl class="it-facts">
+          <div><dt>Funder</dt><dd>{{ grant.org_name }}</dd></div>
+          <div><dt>Opens</dt><dd>{{ grant.published_at|date:"j M Y" }}</dd></div>
+          <div><dt>Closes</dt><dd>{{ grant.deadline|date:"j M Y" }}</dd></div>
+        </dl>
+        {% if application %}
+          <a class="btn btn-dark" href="{% url 'my_application' application.public_id %}">View your application</a>
+        {% elif not is_open %}
+          <p class="it-aside-note">This grant is closed for applications.</p>
+        {% elif user.is_authenticated %}
+          <a class="btn btn-dark" href="{% url 'apply' grant.org_slug grant.grant_public_id %}">{% if draft %}Continue your draft{% else %}Apply{% endif %}</a>
+          <p class="it-aside-note">{% if draft %}You saved a draft on {{ draft.updated_at|date:"j M Y" }}. It is not sent until you submit it.{% else %}You can save a draft and come back to it before the deadline.{% endif %}</p>
+        {% else %}
+          <a class="btn btn-dark" href="{% url 'saml2_login' %}?next={{ request.path|urlencode }}">Log in to apply</a>
+          <p class="it-aside-note">Log in with Sweden Connect to apply.</p>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+
+  {% if similar %}
+  <section class="it-card-section" aria-labelledby="similar-title">
+    <div class="it-row-head"><div><h2 id="similar-title">{% icon "sparkle" %}More from {{ grant.org_name }}</h2><p>Other open calls from the same funder.</p></div><a class="it-link" href="{% url 'calls' %}?funder={{ grant.org_slug }}">See all {% icon "arrow-up-right" %}</a></div>
+    <ul class="it-grant-grid">
+      {% for grant in similar %}<li>{% include "core/catalog/_card.html" %}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</div>
+<div class="pb-5"></div>
+{% endwith %}
+{% endblock %}

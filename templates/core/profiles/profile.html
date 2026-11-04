@@ -1,0 +1,54 @@
+{% extends "core/app_base.html" %}
+{% load static it42 %}
+{% comment %}
+Profile / Applicant / Private: banner, profile column and the
+tab card. ``overlay`` names a dialog in core/profiles/overlay/ shown over the page (the
+page behind is inert). Keep the CV upload panel last: scripts/acceptance.py posts the last
+form on the page.
+{% endcomment %}
+{% block title %}Profile · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'it42/sortable.css' %}">{% if overlay == "orcid_loader" %}<noscript><meta http-equiv="refresh" content="2"></noscript>{% endif %}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'profile' %}">Account</a></li><li aria-current="page">{{ profile.full_name|default:user.username }}</li>{% endblock %}
+{% block app_attrs %}{% if overlay %} inert{% endif %}{% endblock %}
+{% block overlay %}{% if overlay %}{% with "core/profiles/overlay/"|add:overlay|add:".html" as dialog %}{% include dialog %}{% endwith %}{% endif %}{% endblock %}
+{% block content %}
+{% include "core/profiles/_banner.html" %}
+
+<div class="it-profile-cols">
+  {% include "core/profiles/_profile_bar.html" with public=False %}
+
+  <section class="it-card it-cv-card" data-tabs aria-label="Your profile">
+    <div class="it-cv-card-head">
+      <ul class="it-tabs" role="tablist">
+        <li><a href="#overview" role="tab" aria-selected="true">Overview</a></li>
+        <li><a href="#academic-cv" role="tab">Academic CV <span class="it-tab-count">{{ rows|length }}</span></a></li>
+        <li><a href="#stats" role="tab">Stats</a></li>
+        <li><a href="#cv-upload" role="tab">CV upload</a></li>
+        <li><a href="#personal" role="tab">{% icon "lock" %}Personal info</a></li>
+      </ul>
+      {% if last_updated %}<small>Last updated {{ last_updated|date:"j M Y" }}</small>{% endif %}
+    </div>
+    <section class="it-tabpanel" id="overview" role="tabpanel" aria-label="Overview">
+      {% include "core/profiles/_overview.html" %}
+    </section>
+    <section class="it-tabpanel" id="academic-cv" role="tabpanel" aria-label="Academic CV">
+      {% include "core/profiles/_cv_table.html" with public=False %}
+    </section>
+    <section class="it-tabpanel" id="stats" role="tabpanel" aria-label="Stats">
+      {% include "core/profiles/_stats.html" %}
+    </section>
+    <section class="it-tabpanel" id="personal" role="tabpanel" aria-label="Personal info">
+      {% include "core/profiles/_personal.html" %}
+    </section>
+    <section class="it-tabpanel" id="cv-upload" role="tabpanel" aria-label="CV upload">
+      {% include "core/profiles/_cv_upload.html" %}
+    </section>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'it42/tabs.js' %}"></script>
+<script src="{% static 'it42/profile.js' %}"></script>
+{% if overlay == "edit_data" %}<script src="{% static 'it42/sortable.js' %}"></script>{% endif %}
+{% if overlay == "orcid_loader" %}<script src="{% static 'it42/orcid_import.js' %}"></script>{% endif %}
+{% endblock %}

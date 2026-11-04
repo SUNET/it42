@@ -1,0 +1,125 @@
+[
+  {
+    "name": "a1",
+    "email": "elsa.lindqvist@student.uu.se",
+    "given_name": "Elsa",
+    "surname": "Lindqvist",
+    "common_name": "Elsa Lindqvist",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "a2",
+    "email": "oskar.bergstrom@kth.se",
+    "given_name": "Oskar",
+    "surname": "Bergström",
+    "common_name": "Oskar Bergström",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "a3",
+    "email": "maja.holmgren@student.lu.se",
+    "given_name": "Maja",
+    "surname": "Holmgren",
+    "common_name": "Maja Holmgren",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "a4",
+    "email": "henrik.dahl@student.su.se",
+    "given_name": "Henrik",
+    "surname": "Dahl",
+    "common_name": "Henrik Dahl",
+    "groups": [
+      "Users"
+    ]
+  },
+
+  {
+    "name": "staff1",
+    "email": "karin.sjoberg@gu.se",
+    "given_name": "Karin",
+    "surname": "Sjöberg",
+    "common_name": "Karin Sjöberg",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "staff2",
+    "email": "johan.akesson@su.se",
+    "given_name": "Johan",
+    "surname": "Åkesson",
+    "common_name": "Johan Åkesson",
+    "groups": [
+      "Users"
+    ]
+  },
+
+  {
+    "name": "r1",
+    "email": "ingrid.nystrom@umu.se",
+    "given_name": "Ingrid",
+    "surname": "Nyström",
+    "common_name": "Ingrid Nyström",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "r2",
+    "email": "peter.lund@chalmers.se",
+    "given_name": "Peter",
+    "surname": "Lund",
+    "common_name": "Peter Lund",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "r3",
+    "email": "sara.ekholm@liu.se",
+    "given_name": "Sara",
+    "surname": "Ekholm",
+    "common_name": "Sara Ekholm",
+    "groups": [
+      "Users"
+    ]
+  },
+
+  {
+    "name": "ro1",
+    "email": "lena.wikstrom@uu.se",
+    "given_name": "Lena",
+    "surname": "Wikström",
+    "common_name": "Lena Wikström",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "ro2",
+    "email": "nils.hedlund@kth.se",
+    "given_name": "Nils",
+    "surname": "Hedlund",
+    "common_name": "Nils Hedlund",
+    "groups": [
+      "Users"
+    ]
+  },
+  {
+    "name": "sig1",
+    "email": "jonas.ek@uu.se",
+    "given_name": "Jonas",
+    "surname": "Ek",
+    "common_name": "Jonas Ek",
+    "groups": [
+      "Users"
+    ]
+  }
+]

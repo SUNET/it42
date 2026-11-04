@@ -1,0 +1,32 @@
+{% comment %}
+One row of a grant application form built from its schema (formschema.form_layout):
+``row.spec`` is the schema entry, ``row.field`` the bound field (None for layout entries).
+{% endcomment %}
+{% if row.spec.type == "heading" %}
+  <h2 class="h5 mt-4 mb-2">{{ row.spec.label }}</h2>
+{% elif row.spec.type == "paragraph" %}
+  <p class="text-body-secondary">{{ row.spec.label|linebreaksbr }}</p>
+{% elif row.spec.type == "radio" or row.spec.type == "checkboxes" %}
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</legend>
+    {% for choice in row.field %}
+      <div class="form-check">{{ choice.tag }}<label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label></div>
+    {% endfor %}
+    {% if row.field.help_text %}<div class="form-text">{{ row.field.help_text }}</div>{% endif %}
+    {% for error in row.field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </fieldset>
+{% elif row.spec.type == "checkbox" %}
+  <div class="form-check mb-3">
+    {{ row.field }}
+    <label class="form-check-label" for="{{ row.field.id_for_label }}">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+    {% if row.field.help_text %}<div class="form-text">{{ row.field.help_text }}</div>{% endif %}
+    {% for error in row.field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+{% else %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ row.field.id_for_label }}">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+    {{ row.field }}
+    {% if row.field.help_text %}<div class="form-text">{{ row.field.help_text }}</div>{% endif %}
+    {% for error in row.field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+{% endif %}

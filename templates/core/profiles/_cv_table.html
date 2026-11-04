@@ -1,0 +1,49 @@
+{% load it42 %}{% comment %}
+Academic CV tab: one table of every CV entry. Search, section chips and sort are GET
+parameters (q, section, sort) that work without JavaScript; static/it42/profile.js filters
+the rows in place instead. ``public`` drops the edit links.
+{% endcomment %}
+{% if rows %}
+<form class="it-cv-tools" method="get" action="#academic-cv" data-cv-filter>
+  <div class="it-cv-search">
+    {% icon "magnifying-glass" %}
+    <label class="visually-hidden" for="cv-q">Search the CV</label>
+    <input id="cv-q" type="search" name="q" value="{{ cv_query }}" placeholder="Search the CV" autocomplete="off">
+  </div>
+  <div class="it-cv-sort">
+    {% icon "sort-ascending" %}
+    <label class="visually-hidden" for="cv-sort">Sort</label>
+    <select id="cv-sort" name="sort">
+      {% for key, label in sorts.items %}<option value="{{ key }}"{% if key == cv_sort %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <fieldset class="it-cv-chips">
+    <legend class="visually-hidden">Section</legend>
+    <label class="it-chip-radio"><input type="radio" name="section" value=""{% if not cv_section %} checked{% endif %}><span>All <small>{{ rows|length }}</small></span></label>
+    {% for section, count in chips %}
+      <label class="it-chip-radio"><input type="radio" name="section" value="{{ section.key }}"{% if section.key == cv_section %} checked{% endif %}><span>{{ section.short }} <small>{{ count }}</small></span></label>
+    {% endfor %}
+  </fieldset>
+  <noscript><button class="btn btn-sm btn-light" type="submit">Apply</button></noscript>
+</form>
+<div class="it-table-wrap">
+  <table class="it-cv-table">
+    <thead><tr><th scope="col">Section</th><th scope="col">Item</th><th scope="col">Details</th><th scope="col">Dates</th></tr></thead>
+    <tbody>
+      {% for row, visible, newest in table_rows %}
+        <tr data-section="{{ row.section.key }}" data-search="{{ row.search_text }}" data-date="{{ row.sort_date }}" data-short="{{ row.section.short }}" data-order="{{ newest }}"{% if not visible %} hidden{% endif %}>
+          <td><span class="it-section-tag">{{ row.section.short }}</span></td>
+          <td class="it-cv-item">{% if public %}{{ row.summary }}{% else %}<a href="{% url 'cv_edit' row.section.key row.entry.pk %}">{{ row.summary }}</a>{% endif %}{% if row.entry.is_imported and not public %}<span class="it-source">ORCID</span>{% endif %}</td>
+          <td class="it-cv-details">{{ row.details }}</td>
+          <td class="it-cv-dates">{{ row.dates }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="it-card-note small" data-cv-summary aria-live="polite">
+  {% if cv_query %}{{ shown_count }} result{{ shown_count|pluralize }} for “{{ cv_query }}” in titles and details.{% elif cv_section %}Showing {{ shown_count }} of {{ rows|length }} entries.{% else %}Showing all {{ rows|length }} entries.{% endif %}
+</p>
+{% else %}
+  <p class="it-card-note">{% if public %}No CV entries yet.{% else %}Your academic CV is empty. <a href="{% url 'profile_data' %}">Add entries</a>, or import them from ORCID.{% endif %}</p>
+{% endif %}

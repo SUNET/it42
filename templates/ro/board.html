@@ -1,0 +1,72 @@
+{% extends "ro/base.html" %}
+{% load it42 %}
+{% block title %}Board · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li>Sign-off</li><li aria-current="page">Board</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Applications from your researchers</h1>
+    <p>Sign or decline each application that names {{ research_org.name }} as its administrating organisation. The funder reviews it only after you sign.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    <span class="it-sort-label">Sort by</span>
+    <nav class="it-segments" aria-label="Sort the board">
+      <a href="?sort=recent"{% if sort == "recent" %} aria-current="true"{% endif %}>{% icon "clock" %}Recent</a>
+      <a href="?sort=deadline"{% if sort == "deadline" %} aria-current="true"{% endif %}>{% icon "hourglass" %}Expiring</a>
+    </nav>
+    <span class="it-chip-box"><span class="it-diamond" aria-hidden="true"></span>{{ to_accept }} to accept{% if next_deadline %} · next by {{ next_deadline|date:"j M" }}{% endif %}</span>
+  </div>
+</div>
+
+<p class="it-board-caption"><strong>Your decision</strong> Please review and decide whether you accept each application.</p>
+<div class="it-board it-board-4">
+  {% for column in columns %}
+    <section class="it-column it-column-{{ column.key }}" aria-labelledby="col-{{ column.key }}">
+      <div class="it-column-head">
+        <span class="it-column-dot" aria-hidden="true"></span>
+        <h2 id="col-{{ column.key }}">{{ column.title }}</h2>
+        <span class="it-count">{{ column.cards|length }}</span>
+      </div>
+      <ul class="it-column-list">
+        {% for card in column.cards %}
+          {% with req=card.req %}
+          <li>
+            <article class="it-app-card" data-request="{{ req.public_id }}">
+              <div class="it-app-card-top">
+                <span class="it-status it-status-{% if req.status == 'pending' %}violet{% elif req.status == 'signed' %}green{% elif req.status == 'declined' %}red{% else %}grey{% endif %}"><span class="it-status-dot" aria-hidden="true"></span>{{ req.get_status_display }}</span>
+              </div>
+              <h3><a href="{% url 'request_detail' req.pk %}">{{ req.grant_title }}</a></h3>
+              <div class="it-app-card-grant">
+                {% icon "hand-coins" %}
+                <div><strong>{{ card.funder }}</strong><span>Grant call</span></div>
+              </div>
+              <div class="it-person"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ req.applicant_name|initials }}</span>{{ req.applicant_name }}</div>
+              <div class="it-app-card-foot">
+                <span class="it-meta">{% icon "calendar-blank" %}{% if req.status == "pending" %}Accept by {{ req.deadline|date:"j M" }}{% elif req.decided_at %}{{ req.get_status_display }} {{ req.decided_at|date:"j M" }}{% else %}Was due {{ req.deadline|date:"j M" }}{% endif %}</span>
+              </div>
+            </article>
+          </li>
+          {% endwith %}
+        {% empty %}
+          <li class="it-column-empty">{% if column.key == "pending" %}Nothing to accept.{% else %}Nothing here.{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block panel %}
+<aside class="it-panel" aria-label="Notifications and calendar">
+  <section>
+    <h2>Notifications</h2>
+    <ul class="it-notes">
+      {% for note in feed %}
+        <li><span class="it-note-icon">{% icon note.icon %}</span><div><a href="{% url 'request_detail' note.request.pk %}">{{ note.text }}</a><time datetime="{{ note.when|date:'c' }}">{{ note.when|timesince }} ago</time></div></li>
+      {% empty %}
+        <li class="it-notes-empty">New applications from your researchers show up here.</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% include "org/_agenda.html" %}
+</aside>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "org/review/site/base.html" %}
+{% block title %}{{ title }} · {{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">My panels</a></li><li><a href="{% url 'review_panel' panel.pk %}">{{ panel.name }}</a></li><li aria-current="page">{{ title }}</li>{% endblock %}
+{% block content %}
+  <div class="it-card" style="max-width: 40rem">
+    <h1 class="it-h1">{{ title }}</h1>
+    <form method="post">{% csrf_token %}
+      {% include "includes/form_fields.html" %}
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a class="btn btn-link" href="{% url 'review_panel' panel.pk %}">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

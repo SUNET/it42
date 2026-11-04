@@ -1,0 +1,51 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% block title %}{{ application.applicant_name }} · {{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'panel_list' %}">Review panels</a></li><li><a href="{% url 'panel_detail' panel.pk %}">{{ panel.name }}</a></li><li aria-current="page">{{ application.applicant_name }}</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>{{ application.applicant_name }} {% status_pill application.status %}</h1>
+    <p>{{ application.grant.title }} · reviewed by {{ panel.name }}</p>
+  </div>
+  <div class="it-toolbar-actions"><a class="btn btn-outline-secondary" href="{% url 'application_detail' application.pk %}">{% icon "file-text" %}Open the application</a></div>
+</div>
+
+  <div class="it-cols">
+    <div class="it-col">
+      <div class="it-card">
+        <h2 class="it-h2">Assigned reviewers</h2>
+        {% if is_admin %}
+          <form method="post" action="{% url 'panel_assign' panel.pk application.pk %}">{% csrf_token %}
+            {% for seat, checked in seats %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="seat_{{ seat.pk }}" name="seat_{{ seat.pk }}"{% if checked %} checked{% endif %}>
+                <label class="form-check-label" for="seat_{{ seat.pk }}">{{ seat.display_name }} <span class="small text-body-secondary">{{ seat.role_label }}</span></label>
+              </div>
+            {% empty %}<p class="text-body-secondary">The panel has no reviewing seats yet.</p>{% endfor %}
+            {% if seats %}<button class="btn btn-primary mt-2" type="submit">Save assignment</button>{% endif %}
+          </form>
+          <p class="it-card-note">Remove a reviewer who declared a conflict; chairpersons and supporting admins see every application anyway.</p>
+        {% else %}
+          <ul class="mb-0">{% for m in review.assigned %}<li>{{ m.display_name }}</li>{% empty %}<li class="text-body-secondary">Nobody assigned.</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+      <div class="it-card">
+        <h2 class="it-h2">Conflicts of interest and competence</h2>
+        {% include "org/review/_declarations.html" with declarations=review.declarations assigned=None %}
+      </div>
+    </div>
+    <div class="it-col">
+      <div class="it-card">
+        <h2 class="it-h2">Assessments</h2>
+        {% include "org/review/_assessments.html" with assessments=review.assessments %}
+      </div>
+      {% if show_final %}
+        <div class="it-card" id="final-statement">
+          <h2 class="it-h2">Final statement</h2>
+          {% include "org/review/_final_statement.html" with final=review.final %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

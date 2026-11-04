@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% load static it42 %}
+{% comment %}
+Applicant layout (Dashboard / Applicant): role sidebar, top bar with breadcrumbs, content
+and an optional right panel (block ``panel``). Blocks: ``crumbs`` (the breadcrumb items
+after "Grants"/"Account"), ``nav`` (the active sidebar item: board, profile or calls),
+``overlay`` (a dialog rendered over the page) and ``app_attrs`` (e.g. ``inert`` while the
+overlay is open).
+{% endcomment %}
+{% block layout_css %}<link rel="stylesheet" href="{% static 'it42/app.css' %}">{% endblock %}
+{% block body %}
+{% block overlay %}{% endblock %}
+<div class="it-app"{% block app_attrs %}{% endblock %}>
+  <aside class="it-sidebar" aria-label="Applicant menu">
+    <div class="it-sidebar-head">
+      <a class="it-logo" href="{% url 'home' %}"><img src="{% static 'it42/logo.svg' %}" alt="" width="20" height="24"><span>IT42</span></a>
+      <span class="it-role-tag"><span class="it-role-dot" aria-hidden="true"></span>Applicant</span>
+    </div>
+    {% with active=request.resolver_match.url_name %}
+    <nav>
+      <h2 class="it-sidebar-section">Open calls</h2>
+      <ul class="it-sidebar-list">
+        <li><a class="it-sidebar-item" href="{% url 'calls' %}">{% icon "storefront" %}Open calls</a></li>
+      </ul>
+      <h2 class="it-sidebar-section">Grants</h2>
+      <ul class="it-sidebar-list">
+        <li><a class="it-sidebar-item" href="{% url 'my_applications' %}"{% if active == 'my_applications' or active == 'my_application' or active == 'apply' %} aria-current="page"{% endif %}>{% icon "kanban" %}Board</a></li>
+      </ul>
+      <h2 class="it-sidebar-section">Account</h2>
+      <ul class="it-sidebar-list">
+        <li><a class="it-sidebar-item" href="{% url 'profile' %}"{% if active == 'profile' or active|slice:':8' == 'profile_' or active|slice:':3' == 'cv_' or active|slice:':6' == 'orcid_' %} aria-current="page"{% endif %}>{% icon "user-circle" %}Profile</a></li>
+        <li><a class="it-sidebar-item" href="{% url 'text_page' 'help' %}">{% icon "question" %}Help</a></li>
+        <li>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+            <button class="it-sidebar-item" type="submit">{% icon "sign-out" %}Log out</button>
+          </form>
+        </li>
+      </ul>
+    </nav>
+    {% endwith %}
+  </aside>
+  <div class="it-app-main">
+    <header class="it-topbar">
+      <nav aria-label="breadcrumb">
+        <ol class="it-crumbs">{% block crumbs %}{% endblock %}</ol>
+      </nav>
+      <div class="it-topbar-actions">
+        <form class="it-topbar-search" method="get" action="{% url 'calls' %}" role="search">
+          {% icon "magnifying-glass" %}
+          <label class="visually-hidden" for="topbar-q">Search open calls</label>
+          <input id="topbar-q" type="search" name="q" placeholder="Search open calls">
+        </form>
+        <span class="it-topbar-user"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ user.get_full_name|default:user.username|initials }}</span>{{ user.get_full_name|default:user.username }}</span>
+      </div>
+    </header>
+    <main class="it-app-content">
+      {% include "includes/messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% block panel %}{% endblock %}
+</div>
+{% endblock body %}

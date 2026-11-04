@@ -1,0 +1,40 @@
+{% extends "org/review/site/base.html" %}
+{% block title %}My profile · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">My panels</a></li><li aria-current="page">My profile</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>My reviewer profile</h1>
+    <p>Payment details, topics and a passport copy, for {{ ORG_NAME }} to pay reviewer fees.</p>
+  </div>
+</div>
+  <div class="it-cols">
+    <div class="it-col">
+      <div class="it-card">
+        <h2 class="it-h2">Payment information and topics</h2>
+        <p class="it-card-note">Seen by {{ ORG_NAME }} admins only, for paying reviewer fees. Never shown to other panel members.</p>
+        <form method="post">{% csrf_token %}
+          {% include "includes/form_fields.html" %}
+          <button class="btn btn-primary" type="submit" name="save_profile" value="1">Save</button>
+        </form>
+      </div>
+    </div>
+    <div class="it-col">
+      <div class="it-card">
+        <h2 class="it-h2">Passport copy</h2>
+        {% if profile.passport %}
+          <p class="mb-2"><a href="{% url 'review_passport' %}">{{ profile.passport_name }}</a> <span class="small text-body-secondary">{{ profile.passport_size|filesizeformat }} · uploaded {{ profile.passport_uploaded_at|date:"Y-m-d H:i" }}</span></p>
+          <form method="post" action="{% url 'review_passport_delete' %}" class="mb-3">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+          </form>
+        {% else %}
+          <p class="text-body-secondary">No copy uploaded yet.</p>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data">{% csrf_token %}
+          {% with form=upload %}{% include "includes/form_fields.html" %}{% endwith %}
+          <button class="btn btn-outline-primary" type="submit" name="upload" value="1">{% if profile.passport %}Replace{% else %}Upload{% endif %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

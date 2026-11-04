@@ -1,0 +1,320 @@
+name: it42
+
+x-web: &web
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  image: it42-app:dev
+  command: ["web"]
+  restart: unless-stopped
+  # templates/ is bind-mounted below (read-only) and read without caching, so template
+  # edits are live; src/ and static/ changes still need a rebuild.
+  environment:
+    TEMPLATES_LIVE: "1"
+    IT42_DOMAIN: ${IT42_DOMAIN:-it42.vr}
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
+    interval: 10s
+    timeout: 5s
+    retries: 6
+    start_period: 30s
+
+# The research organisation directory (config/research_orgs.toml, made from the .example by
+# scripts/make-env.sh), mounted read-only into every web and worker container.
+x-directory: &directory ./config/research_orgs.toml:/app/config/research_orgs.toml:ro
+
+x-worker: &worker
+  image: it42-app:dev
+  command: ["worker"]
+  restart: unless-stopped
+  environment:
+    IT42_DOMAIN: ${IT42_DOMAIN:-it42.vr}
+  healthcheck:
+    # Both loops touch a marker file every second or so.
+    test: ["CMD-SHELL", "for f in relay consume; do test $$(( $$(date +%s) - $$(stat -c %Y /tmp/$$f.alive) )) -lt 30 || exit 1; done"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+    start_period: 30s
+
+x-db: &db
+  image: postgres:18.6
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    interval: 5s
+    timeout: 5s
+    retries: 10
+
+services:
+  proxy:
+    image: caddy:2.11.6
+    restart: unless-stopped
+    # PROXY_BIND (.env) is the address Caddy listens on: 127.0.0.1 for a laptop,
+    # 0.0.0.0 on a shared dev host that other machines reach over the network.
+    ports:
+      - "${PROXY_BIND:-127.0.0.1}:80:80"
+      - "${PROXY_BIND:-127.0.0.1}:443:443"
+    # The site names and the certificates (Caddyfile): IT42_DOMAIN=it42.vr with the
+    # mkcert certificate on a laptop; a public domain with IT42_TLS=public_tls on a server.
+    environment:
+      IT42_DOMAIN: ${IT42_DOMAIN:-it42.vr}
+      IT42_TLS: ${IT42_TLS:-local_tls}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on:
+      core-web: {condition: service_healthy}
+      o1-web: {condition: service_healthy}
+      o2-web: {condition: service_healthy}
+      o1-review-web: {condition: service_healthy}
+      o2-review-web: {condition: service_healthy}
+      ro-web: {condition: service_healthy}
+      idp: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  idp:
+    # Built locally from kushaldas/saml@a2142bf (RSA-SHA256 signing).
+    image: ${IDP_IMAGE:-kushaldas/idp2:latest}
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "/idp/entrypoint.sh"]
+    environment:
+      IDP_BASE_URL: https://idp.${IT42_DOMAIN:-it42.vr}
+      # Empty: every user keeps idp2's hunter2. The shared server sets it in .env with
+      # scripts/set-idp-password.sh (base64 of a bcrypt hash; the plaintext stays out).
+      IDP_PASSWORD_HASH: ${IDP_PASSWORD_HASH:-}
+    volumes:
+      - ./idp/entrypoint.sh:/idp/entrypoint.sh:ro
+      - ./idp/users.json:/data/users.json:ro
+      - ./secrets/saml/idp/idp.key:/data/idp.key:ro
+      - ./secrets/saml/idp/idp.pem:/data/idp.pem:ro
+      - ./secrets/saml/sp-metadata:/sp-metadata:ro
+      # Server-only users (JSON lists like idp/users.json); empty on a laptop.
+      - ./secrets/idp-users:/data/extra-users:ro
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/sps-registered"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    hostname: rabbitmq
+    restart: unless-stopped
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      edge: {}
+      mq_core: {ipv4_address: 10.242.1.10}
+      mq_o1: {ipv4_address: 10.242.2.10}
+      mq_o2: {ipv4_address: 10.242.3.10}
+      mq_ro: {ipv4_address: 10.242.4.10}
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 30s
+
+  core-db:
+    <<: *db
+    env_file: env/core.env
+    volumes: [core_db:/var/lib/postgresql]
+    networks: [core_net]
+
+  o1-db:
+    <<: *db
+    env_file: env/o1.env
+    volumes: [o1_db:/var/lib/postgresql]
+    networks: [o1_net]
+
+  o2-db:
+    <<: *db
+    env_file: env/o2.env
+    volumes: [o2_db:/var/lib/postgresql]
+    networks: [o2_net]
+
+  ro-db:
+    <<: *db
+    env_file: env/ro.env
+    volumes: [ro_db:/var/lib/postgresql]
+    networks: [ro_net]
+
+  core-web:
+    <<: *web
+    env_file: env/core.env
+    depends_on: {core-db: {condition: service_healthy}}
+    volumes:
+      - core_media:/app/media
+      - ./secrets/saml/core:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, core_net]
+
+  core-worker:
+    <<: *worker
+    env_file: [env/core.env, env/core-mq.env]
+    depends_on:
+      core-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [*directory]
+    networks: [core_net, mq_core]
+
+  # Background ORCID imports: needs the internet (edge) and
+  # the core database, never the broker, so it is not part of core-worker.
+  core-orcid:
+    <<: *worker
+    command: ["python", "manage.py", "run_orcid_imports"]
+    env_file: env/core.env
+    healthcheck:
+      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(stat -c %Y /tmp/orcid.alive) )) -lt 30"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on: {core-web: {condition: service_healthy}}
+    volumes: [*directory]
+    networks: [edge, core_net]
+
+  o1-web:
+    <<: *web
+    env_file: env/o1.env
+    depends_on: {o1-db: {condition: service_healthy}}
+    volumes:
+      - o1_media:/app/media
+      - ./secrets/saml/o1:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o1_net]
+
+  o1-worker:
+    <<: *worker
+    env_file: [env/o1.env, env/o1-mq.env]
+    depends_on:
+      o1-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [o1_media:/app/media, *directory]
+    networks: [o1_net, mq_o1]
+
+  # The org's reviewer site: same image, database and media; its own hostname and
+  # SAML service provider. env/o1-review.env overrides the staff site's values.
+  o1-review-web:
+    <<: *web
+    env_file: [env/o1.env, env/o1-review.env]
+    depends_on:
+      o1-db: {condition: service_healthy}
+      o1-web: {condition: service_healthy}  # runs the migrations first
+    volumes:
+      - o1_media:/app/media
+      - ./secrets/saml/o1-review:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o1_net]
+
+  o2-web:
+    <<: *web
+    env_file: env/o2.env
+    depends_on: {o2-db: {condition: service_healthy}}
+    volumes:
+      - o2_media:/app/media
+      - ./secrets/saml/o2:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o2_net]
+
+  o2-worker:
+    <<: *worker
+    env_file: [env/o2.env, env/o2-mq.env]
+    depends_on:
+      o2-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [o2_media:/app/media, *directory]
+    networks: [o2_net, mq_o2]
+
+  # The org's reviewer site: same image, database and media; its own hostname and
+  # SAML service provider. env/o2-review.env overrides the staff site's values.
+  o2-review-web:
+    <<: *web
+    env_file: [env/o2.env, env/o2-review.env]
+    depends_on:
+      o2-db: {condition: service_healthy}
+      o2-web: {condition: service_healthy}  # runs the migrations first
+    volumes:
+      - o2_media:/app/media
+      - ./secrets/saml/o2-review:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o2_net]
+
+  # The research organisation site: one site and database for every organisation in
+  # the directory. Its worker talks only to the orgs (o1-to-ro, ro-to-o1, ...).
+  ro-web:
+    <<: *web
+    env_file: env/ro.env
+    depends_on: {ro-db: {condition: service_healthy}}
+    volumes:
+      - ro_media:/app/media
+      - ./secrets/saml/ro:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, ro_net]
+
+  ro-worker:
+    <<: *worker
+    env_file: [env/ro.env, env/ro-mq.env]
+    depends_on:
+      ro-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [ro_media:/app/media, *directory]
+    networks: [ro_net, mq_ro]
+
+networks:
+  edge: {}
+  core_net: {internal: true}
+  o1_net: {internal: true}
+  o2_net: {internal: true}
+  ro_net: {internal: true}
+  # Fixed subnets so RabbitMQ can bind AMQP to its mq_* addresses only
+  # (rabbitmq/rabbitmq.conf); on edge it serves just the management UI.
+  mq_core:
+    internal: true
+    ipam: {config: [{subnet: 10.242.1.0/24}]}
+  mq_o1:
+    internal: true
+    ipam: {config: [{subnet: 10.242.2.0/24}]}
+  mq_o2:
+    internal: true
+    ipam: {config: [{subnet: 10.242.3.0/24}]}
+  mq_ro:
+    internal: true
+    ipam: {config: [{subnet: 10.242.4.0/24}]}
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
+  rabbitmq_data: {}
+  core_db: {}
+  o1_db: {}
+  o2_db: {}
+  ro_db: {}
+  core_media: {}
+  o1_media: {}
+  o2_media: {}
+  ro_media: {}

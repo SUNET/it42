@@ -1,0 +1,14 @@
+{% extends "org/base.html" %}
+{% block title %}{{ title }} · {{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'panel_list' %}">Review panels</a></li><li><a href="{% url 'panel_detail' panel.pk %}">{{ panel.name }}</a></li><li aria-current="page">{{ title }}</li>{% endblock %}
+{% block content %}
+  <div class="it-card" style="max-width: 40rem">
+    <h1 class="it-h1">{{ title }}</h1>
+    <p class="small text-body-secondary">Reviewers may write conflict declarations, assessments and the final statement only while the task of that kind is open. Dates can be changed at any time; an end in the past closes the task at once.</p>
+    <form method="post">{% csrf_token %}
+      {% include "includes/form_fields.html" %}
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a class="btn btn-link" href="{% url 'panel_detail' panel.pk %}">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

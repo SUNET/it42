@@ -1,0 +1,201 @@
+{% extends "org/base.html" %}
+{% load static it42 %}
+{% block title %}{{ application.applicant_name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li><a href="{% url 'grant_applications' application.grant.pk %}">{{ application.grant.title }}</a></li><li aria-current="page">{{ application.applicant_name }}</li>{% endblock %}
+{% block content %}
+<div class="it-detail-card">
+  <aside class="it-infobar">
+    <div class="it-stage"><span class="it-stage-dot" aria-hidden="true"></span><span>{% for step in steps %}{% if step.state == "current" or step.state == "declined" %}{{ step.label }}{% endif %}{% endfor %}</span><span>· Stage {{ stage }} of {{ steps|length }}</span></div>
+    <div>
+      <h1>{{ application.applicant_name }}</h1>
+      <p class="it-infobar-sub">Application to {{ application.grant.title }}</p>
+    </div>
+    <div>
+      <h2 class="it-label">Progress</h2>
+      <ol class="it-progress">
+        {% for step in steps %}
+          <li class="is-{{ step.state }}"><span class="it-progress-dot" aria-hidden="true"></span><span>{{ step.label }}</span><small>{{ step.note }}</small></li>
+        {% endfor %}
+      </ol>
+    </div>
+    <div class="it-infobar-block">
+      <h2 class="it-label">Details</h2>
+      <dl class="it-kv">
+        <div><dt>Applicant</dt><dd><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ application.applicant_name|initials }}</span>{{ application.applicant_name }}</dd></div>
+        <div><dt>Email</dt><dd>{{ application.applicant_email|default:"—" }}</dd></div>
+        <div><dt>Account</dt><dd><code>{{ application.applicant_subject }}</code></dd></div>
+        <div><dt>Grant deadline</dt><dd><span class="it-diamond" aria-hidden="true"></span>{{ application.grant.deadline|date:"j M Y" }}</dd></div>
+        {% if application.research_org %}<div><dt>Organisation</dt><dd data-research-org>{% icon "buildings" %}{{ application.research_org|research_org_name }}</dd></div>{% endif %}
+        <div><dt>Submitted</dt><dd>{{ application.submitted_at|date:"j M Y, H:i" }}</dd></div>
+        <div><dt>Status</dt><dd><span data-status="{{ application.status }}">{% status_pill application.status %}</span></dd></div>
+        <div><dt>Reviewers</dt><dd>{% if assigned %}<span class="it-tag-soft">{{ assigned }} assigned · {{ summary.submitted }} of {{ assigned }} in</span>{% else %}<span class="it-tag-soft">Not assigned yet</span>{% endif %}</dd></div>
+      </dl>
+    </div>
+    {% if application.research_org %}{% include "org/applications/_signoff.html" %}{% endif %}
+    {% if application.reviewable %}
+    <form method="post" action="{% url 'application_status' application.pk %}" class="it-infobar-actions">{% csrf_token %}
+      <label class="it-label mb-0" for="status">Set the status</label>
+      <select class="form-select" id="status" name="status">
+        {% for value, label in statuses %}<option value="{{ value }}"{% if value == application.status %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">Update</button>
+      <p class="it-draft-meta">The applicant sees status changes and questions.</p>
+    </form>
+    {% endif %}
+  </aside>
+
+  <div class="it-detail-main" data-tabs>
+    <ul class="it-tabs" role="tablist">
+      <li><a href="#application" role="tab" aria-selected="true">Proposal</a></li>
+      <li><a href="#grant" role="tab">Grant details</a></li>
+      <li><a href="#reviews" role="tab">Reviews{% if summary.submitted %} <span class="it-tab-count">{{ summary.submitted }}</span>{% endif %}</a></li>
+      <li><a href="#questions" role="tab">Questions{% if questions %} <span class="it-tab-count">{{ questions|length }}</span>{% endif %}</a></li>
+      <li><a href="#activity" role="tab">Activity{% if notes %} <span class="it-tab-count">{{ notes|length }}</span>{% endif %}</a></li>
+    </ul>
+
+    <section class="it-tabpanel" id="application" role="tabpanel" aria-label="Proposal">
+      <div class="it-detail-body">
+        <div class="it-stack">
+          <div class="it-about-grant">
+            <span class="it-label mb-0">About the grant</span>
+            <h2>{{ application.grant.title }}</h2>
+            <p>{{ application.grant.description|truncatewords:60 }}</p>
+            <div class="it-facts-row"><span class="it-fact">Closes  {{ application.grant.deadline|date:"j M Y" }}</span><span class="it-fact">{{ application.grant.get_status_display }}</span></div>
+          </div>
+          <div class="it-block">
+            <h2>Answers</h2>
+            <dl class="it-answers">
+              {% for label, value in answers %}<dt>{{ label }}</dt><dd>{{ value|default:"—"|linebreaksbr }}</dd>{% endfor %}
+            </dl>
+          </div>
+        </div>
+        <div>
+          <div class="it-side-card">
+            <h2>Attachments</h2>
+            <ul class="it-files">
+              {% for doc in documents %}
+                <li>{% icon "file-pdf" %}<span><a href="{% url 'application_document' application.pk doc.pk %}">{{ doc.original_name }}</a></span><small>{{ doc.size|filesizeformat }}</small></li>
+              {% empty %}
+                <li class="it-files-empty">None attached.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="it-side-card">
+            <h2>Activity</h2>
+            <ol class="it-feed it-feed-compact">
+              {% for month in months|slice:":1" %}{% for event in month.events|slice:":3" %}
+                <li><span class="it-feed-avatar" aria-hidden="true">{{ event.who|initials }}</span><div><strong>{{ event.who }} {{ event.text }}</strong><time datetime="{{ event.when|date:'c' }}">{{ event.when|date:"j M, H:i" }}</time></div></li>
+              {% endfor %}{% endfor %}
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="it-tabpanel" id="grant" role="tabpanel" aria-label="Grant details">
+      <div class="it-detail-body">
+        <div class="it-stack">
+          <div class="it-about-grant">
+            <span class="it-label mb-0">The call</span>
+            <h2>{{ application.grant.title }}</h2>
+            <p>{{ application.grant.description|linebreaksbr }}</p>
+            <div class="it-facts-row"><span class="it-fact">{{ application.grant.get_status_display }}</span><span class="it-fact">Created  {{ application.grant.created_at|date:"j M Y" }}</span><span class="it-fact">Closes  {{ application.grant.deadline|date:"j M Y" }}</span></div>
+          </div>
+          <div class="it-block">
+            <h2>Key dates</h2>
+            <ol class="it-key-dates">
+              {% for d in key_dates %}<li{% if d.current %} class="is-current"{% endif %}><time datetime="{{ d.day|date:'Y-m-d' }}">{{ d.day|date:"j M Y" }}</time><span>{{ d.text }}</span>{% if d.current %}<span class="it-now">Now</span>{% endif %}</li>{% endfor %}
+            </ol>
+          </div>
+        </div>
+        <div>
+          <div class="it-side-card">
+            <h2>Application form</h2>
+            <dl class="it-sums">
+              {% for title, count in sections %}<div><dt>{{ title }}</dt><dd>{{ count }} field{{ count|pluralize }}</dd></div>{% endfor %}
+            </dl>
+          </div>
+          <div class="it-side-card">
+            <h2>Granter</h2>
+            <div class="it-people-row"><span class="it-feed-avatar" aria-hidden="true">{{ application.grant.created_by.get_full_name|default:application.grant.created_by.username|initials }}</span><div><strong>{{ application.grant.created_by.get_full_name|default:application.grant.created_by.username }}</strong><span>Created this call · {{ ORG_NAME }}</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="it-tabpanel" id="reviews" role="tabpanel" aria-label="Reviews">
+      <dl class="it-score-tiles">
+        <div><dt>Reviewer average</dt>{% if summary.average is not None %}<dd><strong>{{ summary.average|floatformat:1 }}</strong><span class="it-score-bar" aria-hidden="true"><span style="width: {% widthratio summary.average 10 100 %}%"></span></span></dd><small>out of 10 · {{ summary.submitted }} assessment{{ summary.submitted|pluralize }}</small>{% else %}<dd><span class="it-pending">Pending</span></dd><small>Shown once the panel's review is done</small>{% endif %}</div>
+        <div><dt>Assessments in</dt><dd><strong>{{ summary.submitted }}</strong></dd><small>of {{ summary.assigned }} assigned reviewer{{ summary.assigned|pluralize }}</small></div>
+        <div><dt>Final statement</dt>{% if summary.final_grade is not None %}<dd><strong>{{ summary.final_grade }}/10</strong></dd><small>by the chairperson</small>{% else %}<dd><span class="it-meta">Not written yet</span></dd><small>Written after the review</small>{% endif %}</div>
+      </dl>
+      {% include "org/review/_application_review.html" %}
+    </section>
+
+    <section class="it-tabpanel" id="questions" role="tabpanel" aria-label="Questions to the applicant">
+      <div class="it-block">
+        <h2>Questions to the applicant</h2>
+        <div class="it-messages-list">
+          {% for q in questions %}
+            <div class="it-message">
+              <p class="it-message-q">{{ q.text|linebreaksbr }}</p>
+              <time datetime="{{ q.asked_at|date:'c' }}">{{ q.asked_by }} · {{ q.asked_at|date:"j M Y, H:i" }}</time>
+              {% if q.answered_at %}
+                <p class="it-message-a" data-answer>{{ q.answer|linebreaksbr }}</p>
+                <time datetime="{{ q.answered_at|date:'c' }}">Answered {{ q.answered_at|date:"j M Y, H:i" }}</time>
+              {% else %}
+                <p class="it-files-empty mt-2 mb-0">Waiting for an answer.</p>
+              {% endif %}
+            </div>
+          {% empty %}<p class="it-files-empty">No questions yet.</p>{% endfor %}
+          {% if application.reviewable %}
+          <form method="post" action="{% url 'application_ask' application.pk %}" class="it-card">{% csrf_token %}
+            <label class="form-label fw-semibold mb-0" for="question-text">Ask a question</label>
+            <textarea class="form-control" id="question-text" name="text" rows="3" maxlength="5000" required></textarea>
+            <div><button class="btn btn-primary" type="submit">Send to applicant</button></div>
+          </form>
+          {% else %}
+            <p class="it-card-note">Questions can be asked once the administrating organisation has signed the application.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="it-tabpanel" id="activity" role="tabpanel" aria-label="Activity">
+      <div class="it-detail-body">
+        <div class="it-stack">
+          <form method="post" action="{% url 'application_note' application.pk %}" class="it-composer">{% csrf_token %}
+            <label class="visually-hidden" for="note-text">Internal note</label>
+            <textarea class="form-control" id="note-text" name="text" rows="1" maxlength="5000" required placeholder="Write an internal note for the granter team…"></textarea>
+            <button class="btn btn-primary" type="submit">Post</button>
+          </form>
+          <p class="it-card-note">Notes are visible to {{ SITE_NAME }} members only and never leave this site.</p>
+          {% for month in months %}
+            <div>
+              <h2 class="it-label">{{ month.title }}</h2>
+              <ol class="it-feed">
+                {% for event in month.events %}
+                  <li{% if event.note %} class="is-note"{% endif %}><span class="it-feed-avatar" aria-hidden="true">{{ event.who|initials }}</span><div><strong>{{ event.who }} {{ event.text }}</strong>{% if event.detail %}<p{% if event.note %} data-note{% endif %}>{{ event.detail|linebreaksbr }}</p>{% endif %}<time datetime="{{ event.when|date:'c' }}">{{ event.when|date:"j M, H:i" }}</time></div></li>
+                {% endfor %}
+              </ol>
+            </div>
+          {% endfor %}
+        </div>
+        <div>
+          <div class="it-side-card">
+            <h2>People</h2>
+            <ul class="it-people">
+              {% for person in people %}<li><span class="it-feed-avatar" aria-hidden="true">{{ person.name|initials }}</span><span>{{ person.name }}</span><span class="it-role-badge it-role-badge-{{ person.tone }}">{{ person.role }}</span></li>{% endfor %}
+            </ul>
+          </div>
+          <div class="it-side-card">
+            <h2>What the applicant sees</h2>
+            <p class="it-card-note">The applicant sees every status change and the questions you send. Reviews, notes and reviewer names stay on this site.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'it42/tabs.js' %}"></script>{% endblock %}

@@ -1,0 +1,18 @@
+{# Shared assessments; expects `review` (services.ApplicationReview) and `assessments` (list). #}
+{% load it42 %}
+{% if review.shared %}
+  {% for a in assessments %}
+    <div class="it-review-note" data-assessment="{{ a.member.email }}">
+      <div class="it-review-note-head"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ a.member.display_name|initials }}</span><div><strong>{{ a.member.display_name }}</strong><span>{{ a.member.role_label }} · preliminary grade</span></div><span class="it-score">{{ a.preliminary_grade }}<small>/10</small></span></div>
+      <p class="mb-1">{{ a.assessment|linebreaksbr }}</p>
+      <p class="small mb-1"><em>Preliminary statement:</em> {{ a.preliminary_statement|linebreaksbr }}</p>
+      <p class="small text-body-secondary mb-0">Updated {{ a.updated_at|date:"j M Y, H:i" }}</p>
+    </div>
+  {% empty %}
+    <p class="text-body-secondary mb-0">No assessments were written.</p>
+  {% endfor %}
+{% elif review.assessment_task %}
+  <p class="text-body-secondary mb-0">Private to each reviewer until {{ review.assessment_task.ends_at|date:"j M Y, H:i" }}.</p>
+{% else %}
+  <p class="text-body-secondary mb-0">The panel has no assessment task yet.</p>
+{% endif %}

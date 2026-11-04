@@ -1,0 +1,27 @@
+{# Task list; expects `tasks` [(task, state)], `panel`, `can_edit`, `edit_url`, `delete_url`. #}
+{% load it42 %}
+{% if tasks %}
+  <ul class="list-unstyled mb-0">
+    {% for task, state in tasks %}
+      <li class="it-list-row" data-task="{{ task.kind }}">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <div><strong>{{ task.title }}</strong> <span class="it-status it-status-{% if state == 'open' %}green{% elif state == 'ended' %}grey{% else %}yellow{% endif %}"><span class="it-status-dot" aria-hidden="true"></span>{{ state }}</span></div>
+            <div class="small text-body-secondary">{{ task.kind_label }}</div>
+            <div class="it-meta">{% icon "calendar-blank" %}{{ task.starts_at|date:"j M, H:i" }} – {{ task.ends_at|date:"j M Y, H:i" }}</div>
+          </div>
+          {% if can_edit %}
+            <div class="d-flex gap-1 flex-shrink-0">
+              <a class="it-icon-btn" href="{% url edit_url panel.pk task.pk %}">Edit</a>
+              <form method="post" action="{% url delete_url panel.pk task.pk %}">{% csrf_token %}
+                <button class="it-icon-btn it-icon-btn-danger" type="submit" aria-label="Delete {{ task.title }}">Delete</button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-body-secondary mb-0">No tasks yet. Reviewers can only write while the matching task is open.</p>
+{% endif %}

@@ -1,0 +1,20 @@
+{% extends base_template %}
+{% load it42 %}
+{% comment %}
+The org sites' logged-out page, in the staff (Granter) or reviewer design: common.views.logged_out
+picks ``base_template``. Anonymous, so the sidebar shows only the logo, role and org.
+{% endcomment %}
+{% block title %}Logged out · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li aria-current="page">Logged out</li>{% endblock %}
+{% block content %}
+  <div class="it-gate">
+    <span class="it-banner-icon">{% icon "sign-out" %}</span>
+    <h1>You have been logged out</h1>
+    <p>You are logged out of {{ SITE_NAME }} and of the IT42 identity provider. The next login on any IT42 site asks for your password again.</p>
+    <p class="it-card-note">Other IT42 sites you used in this browser keep their own session until you log out there too.</p>
+    <div class="it-gate-actions">
+      <a class="btn btn-primary" href="{% url 'saml2_login' %}?next=/">Log in again</a>
+      <a class="btn btn-outline-secondary" href="{{ CORE_SITE_URL }}/">{% icon "arrow-left" %}Go to the IT42 home page</a>
+    </div>
+  </div>
+{% endblock %}

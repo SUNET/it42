@@ -1,0 +1,39 @@
+{% load it42 %}{# Profile column; ``public`` hides the edit buttons. #}
+<aside class="it-profile-bar">
+  <div>
+    <span class="it-avatar it-avatar-xl" aria-hidden="true">{{ profile.full_name|default:user.username|initials }}</span>
+    <h1>{{ profile.full_name|default:user.username }}</h1>
+    <div class="it-tags">
+      <span class="it-role-tag"><span class="it-role-dot" aria-hidden="true"></span>Applicant</span>
+      <span class="it-tag-white">{% if public %}Public profile{% else %}Private view{% endif %}</span>
+    </div>
+    {% if profile.academic_title %}<p class="it-profile-title">{{ profile.get_academic_title_display }}{% if profile.other_academic_title %}, {{ profile.other_academic_title }}{% endif %}</p>{% endif %}
+  </div>
+  <div class="it-profile-block">
+    <h2 class="it-label">Basic information</h2>
+    <ul class="it-info">
+      <li>{% icon "envelope-simple" %}{{ user.email }}</li>
+      {% if employment %}
+        <li>{% icon "buildings" %}{{ employment.employer }}</li>
+        {% if employment.department %}<li>{% icon "flask" %}{{ employment.department }}</li>{% endif %}
+      {% endif %}
+      {% if profile.orcid %}<li>{% icon "identification-card" %}<a href="https://orcid.org/{{ profile.orcid }}" rel="noopener">{{ profile.orcid }}</a></li>{% endif %}
+      <li>{% icon "calendar-blank" %}Member since {{ user.date_joined|date:"M Y" }}</li>
+    </ul>
+  </div>
+  {% if profile.bio %}
+  <div class="it-profile-block">
+    <h2 class="it-label">Bio</h2>
+    <p class="it-bio">{{ profile.bio }}</p>
+  </div>
+  {% endif %}
+  <div class="it-infobar-actions">
+    {% if public %}
+      <a class="btn btn-applicant" href="{% url 'profile' %}">Back to my profile</a>
+    {% else %}
+      <a class="btn btn-applicant" href="{% url 'profile_edit' %}">Edit profile</a>
+      <a class="btn btn-white" href="{% url 'profile_data' %}">Edit data</a>
+      <a class="btn btn-white" href="{% url 'profile_public' %}">View public profile</a>
+    {% endif %}
+  </div>
+</aside>

@@ -1,0 +1,33 @@
+{# Review panels on the staff application page (Reviews tab); expects `reviews` and `application`. Assessments show only once shared. #}
+{% load it42 %}
+<div class="it-stack mt-4">
+  {% for review in reviews %}
+    <div class="it-block">
+      <h2><a href="{% url 'panel_application' review.panel.pk application.pk %}">{{ review.panel.name }}</a>
+        <span class="it-meta">· {{ review.assigned|length }} assigned · {{ review.declarations|length }} declaration{{ review.declarations|length|pluralize }}</span></h2>
+      {% if review.shared %}
+        <div class="it-messages-list">
+          {% for a in review.assessments %}
+            <article class="it-review-card">
+              <div class="it-review-card-head">
+                <span class="it-feed-avatar" aria-hidden="true">{{ a.member.display_name|initials }}</span>
+                <div><strong>{{ a.member.display_name }}</strong><span>{{ a.member.role_label }}</span></div>
+                <span class="it-status it-status-green"><span class="it-status-dot" aria-hidden="true"></span>Submitted</span>
+              </div>
+              <p class="it-review-grade"><strong>{{ a.preliminary_grade }}/10</strong> <span>preliminary grade</span></p>
+              <p>{{ a.preliminary_statement|linebreaksbr }}</p>
+              <time datetime="{{ a.created_at|date:'c' }}">Submitted {{ a.created_at|date:"j M Y" }}</time>
+            </article>
+          {% empty %}
+            <p class="it-files-empty mb-0">No assessments were written.</p>
+          {% endfor %}
+        </div>
+      {% elif review.assessment_task %}
+        <p class="it-card-note mb-1">{% icon "eye-slash" %} Assessments private until {{ review.assessment_task.ends_at|date:"j M Y, H:i" }}.</p>
+      {% endif %}
+      {% if review.final %}<p class="mt-3 mb-0">Final statement: grade <strong>{{ review.final.final_grade }}/10</strong>.</p>{% endif %}
+    </div>
+  {% empty %}
+    <p class="it-files-empty mb-0">No review panel handles this grant.</p>
+  {% endfor %}
+</div>

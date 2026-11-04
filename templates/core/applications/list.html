@@ -1,0 +1,105 @@
+{% extends "core/app_base.html" %}
+{% load it42 %}
+{% block title %}My applications · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'my_applications' %}">Grants</a></li><li aria-current="page">Board</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>My applications</h1>
+    <p>Track each application from draft to decision. Drafts stay with you until you submit them.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    <span class="it-sort-label">Sort by</span>
+    <nav class="it-segments" aria-label="Sort applications">
+      <a href="?sort=recent"{% if sort == "recent" %} aria-current="true"{% endif %}>{% icon "clock" %}Recent</a>
+      <a href="?sort=deadline"{% if sort == "deadline" %} aria-current="true"{% endif %}>{% icon "hourglass" %}Deadline</a>
+    </nav>
+    <a class="btn btn-applicant" href="{% url 'calls' %}">{% icon "plus" %}New application</a>
+  </div>
+</div>
+
+<div class="it-board">
+  {% for column in columns %}
+    <section class="it-column{% if column.key == 'decision' %} it-column-done{% endif %}" aria-labelledby="col-{{ column.key }}">
+      <div class="it-column-head">
+        <span class="it-column-dot" aria-hidden="true"></span>
+        <h2 id="col-{{ column.key }}">{{ column.title }}</h2>
+        <span class="it-count">{% if column.key == "draft" %}{{ drafts|length }}{% else %}{{ column.cards|length }}{% endif %}</span>
+      </div>
+      <ul class="it-column-list">
+        {% if column.key == "draft" %}
+          {% for draft in drafts %}
+            <li>
+              <article class="it-app-card">
+                <div class="it-app-card-top">
+                  <span data-status="draft">{% include "includes/status_pill.html" with tone="grey" label="Draft" %}</span>
+                  <form method="post" action="{% url 'delete_draft' draft.pk %}" class="it-card-action">{% csrf_token %}
+                    <button class="it-icon-btn it-icon-btn-danger" type="submit" aria-label="Delete the draft for {{ draft.grant.title }}" title="Delete draft">{% icon "x" %}</button>
+                  </form>
+                </div>
+                <h3><a href="{% url 'apply' draft.grant.org_slug draft.grant.grant_public_id %}">{{ draft.grant.title }}</a></h3>
+                <div class="it-app-card-grant">
+                  {% icon "hand-coins" %}
+                  <div><strong>{{ draft.grant.org_name }}</strong><span>Saved {{ draft.updated_at|date:"j M, H:i" }}</span></div>
+                </div>
+                {% if draft.grant.status != "open" or draft.grant.deadline < today %}
+                  <div class="it-waiting it-waiting-action">{% icon "lock" %}<div><strong>The call has closed</strong><span>This draft can no longer be submitted.</span></div></div>
+                {% endif %}
+                <div class="it-app-card-foot">
+                  <span class="it-meta">{% icon "calendar-blank" %}Due {{ draft.grant.deadline|date:"j M" }}</span>
+                  <span class="it-meta">{% icon "file-text" %}Not sent</span>
+                </div>
+              </article>
+            </li>
+          {% empty %}
+            <li class="it-column-empty">No drafts. Use “Save draft” on an application form to finish it later.</li>
+          {% endfor %}
+        {% else %}
+        {% for card in column.cards %}
+          {% with app=card.application %}
+          <li>
+            <article class="it-app-card{% if app.status == 'under_review' %} it-app-card-locked{% endif %}">
+              <div class="it-app-card-top">
+                <span data-status="{{ app.status }}">{% status_pill app.status %}</span>
+                {% if app.status == "under_review" %}{% icon "lock" %}{% endif %}
+              </div>
+              <h3><a href="{% url 'my_application' app.public_id %}">{{ app.grant.title }}</a></h3>
+              <div class="it-app-card-grant">
+                {% icon "hand-coins" %}
+                <div><strong>{{ app.grant.org_name }}</strong><span>Closes {{ app.grant.deadline|date:"j M Y" }}</span></div>
+              </div>
+              {% if card.open_questions %}
+                <div class="it-waiting it-waiting-action">{% icon "chat-circle-dots" %}<div><strong>Your answer is needed</strong><span>{{ app.grant.org_name }} asked {{ card.open_questions }} question{{ card.open_questions|pluralize }}.</span></div></div>
+              {% elif app.status == "under_review" %}
+                <div class="it-waiting">{% icon "hourglass" %}<div><strong>Out of your hands</strong><span>Waiting for the funder's decision</span></div></div>
+              {% endif %}
+              <div class="it-app-card-foot">
+                <span class="it-meta">{% icon "calendar-blank" %}Submitted {{ app.submitted_at|date:"j M" }}</span>
+                <span class="it-meta" title="Questions from the funder">{% icon "chat-circle" %}{{ card.questions }}</span>
+              </div>
+            </article>
+          </li>
+          {% endwith %}
+        {% empty %}
+          <li class="it-column-empty">{% if column.key == "submitted" and not applications %}You have not applied to anything yet. <a href="{% url 'calls' %}">Browse open calls</a>.{% else %}Nothing here.{% endif %}</li>
+        {% endfor %}
+        {% endif %}
+      </ul>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block panel %}
+<aside class="it-panel" aria-labelledby="feed-title">
+  <section>
+    <h2 id="feed-title">Notifications</h2>
+    <ul class="it-notes">
+      {% for note in feed %}
+        <li><span class="it-note-icon">{% icon note.icon %}</span><div><a href="{% url 'my_application' note.application.public_id %}">{{ note.text }}</a><time datetime="{{ note.when|date:'c' }}">{{ note.when|timesince }} ago</time></div></li>
+      {% empty %}
+        <li class="it-notes-empty">Status changes and questions from funders show up here.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</aside>
+{% endblock %}

@@ -1,0 +1,15 @@
+__pycache__/
+designs/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
+*.sqlite3
+media/
+staticfiles/
+certs/
+secrets/
+env/*.env
+rabbitmq/definitions.json
+.env
+config/research_orgs.toml

@@ -1,0 +1,72 @@
+{% extends "org/base.html" %}
+{% block title %}Members · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">Board</a></li><li aria-current="page">Members</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Members</h1>
+    <p>Staff of {{ ORG_NAME }} who can use this site. Admins create grants, manage review panels and approve new members.</p>
+  </div>
+</div>
+
+<section class="it-card">
+  <div class="it-card-head"><h2>Waiting for approval</h2><small>{{ pending|length }}</small></div>
+  {% if pending %}
+    <div class="table-responsive">
+      <table class="table it-table align-middle mb-0">
+        <thead><tr><th>Name</th><th>Subject</th><th>Email</th><th>First login</th><th class="text-end">Approve as</th></tr></thead>
+        <tbody>
+        {% for u in pending %}
+          <tr>
+            <td>{{ u.get_full_name|default:u.username }}</td>
+            <td><code>{{ u.sso_subject }}</code></td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.date_joined|date:"Y-m-d H:i" }}</td>
+            <td class="text-end">
+              <form method="post" action="{% url 'member_approve' u.pk %}" class="it-inline-form">{% csrf_token %}
+                <select name="role" class="form-select form-select-sm" aria-label="Role for {{ u.username }}">
+                  {% for value, label in roles %}<option value="{{ value }}"{% if value == "staff" %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-sm btn-primary" type="submit">Approve</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="it-card-note">Nobody is waiting. Users appear here after their first login.</p>
+  {% endif %}
+</section>
+
+<section class="it-card">
+  <div class="it-card-head"><h2>Members</h2><small>{{ members|length }}</small></div>
+  <div class="table-responsive">
+    <table class="table it-table align-middle mb-0">
+      <thead><tr><th>Name</th><th>Subject</th><th>Role</th><th>Approved</th><th class="text-end">Actions</th></tr></thead>
+      <tbody>
+      {% for m in members %}
+        <tr>
+          <td>{{ m.user.get_full_name|default:m.user.username }}</td>
+          <td><code>{{ m.user.sso_subject }}</code></td>
+          <td>{% if m.is_admin %}{% include "includes/status_pill.html" with tone="peach" label=m.get_role_display %}{% else %}{% include "includes/status_pill.html" with tone="grey" label=m.get_role_display %}{% endif %}</td>
+          <td>{{ m.approved_at|date:"Y-m-d" }}{% if m.approved_by %} by {{ m.approved_by }}{% endif %}</td>
+          <td class="text-end">
+            <form method="post" action="{% url 'member_role' m.pk %}" class="it-inline-form">{% csrf_token %}
+              <select name="role" class="form-select form-select-sm" aria-label="Role for {{ m.user.username }}">
+                {% for value, label in roles %}<option value="{{ value }}"{% if value == m.role %} selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-sm btn-outline-primary" type="submit">Set role</button>
+            </form>
+            <form method="post" action="{% url 'member_remove' m.pk %}" class="d-inline">{% csrf_token %}
+              <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,33 @@
+{# Calendar and upcoming deadlines for the right panel; expects the context of common.agenda.agenda(). #}
+<section aria-labelledby="calendar-title">
+  <h2 id="calendar-title">Calendar</h2>
+  <table class="it-cal">
+    <caption>{{ month|date:"F Y" }}</caption>
+    <thead><tr>{% for d in weekdays %}<th scope="col">{{ d }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for cell in week %}
+            <td class="{% if not cell.in_month %}is-out{% endif %}{% if cell.is_today %} is-today{% endif %}"{% if cell.is_today %} aria-current="date"{% endif %}>
+              <span>{{ cell.day.day }}</span>
+              {% if cell.kinds %}<span class="it-cal-dots">{% for kind in cell.kinds %}<span class="it-dot it-dot-{{ kind }}"></span>{% endfor %}</span>{% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if legend %}
+    <ul class="it-cal-legend">{% for kind, label in legend %}<li><span class="it-dot it-dot-{{ kind }}" aria-hidden="true"></span>{{ label }}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+<section aria-labelledby="deadlines-title">
+  <h2 id="deadlines-title" class="it-panel-sub">Upcoming deadlines</h2>
+  <ul class="it-deadlines">
+    {% for d in deadlines %}
+      <li class="it-deadline-{{ d.kind }}"><div><strong>{{ d.title }}</strong><span>{{ d.detail }}</span></div><time datetime="{{ d.when|date:'Y-m-d' }}">{{ d.when|date:"j M" }}</time></li>
+    {% empty %}
+      <li class="it-notes-empty">Nothing due.</li>
+    {% endfor %}
+  </ul>
+</section>

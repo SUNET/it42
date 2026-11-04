@@ -1,0 +1,12 @@
+{# Read-only final statement; expects `final` (FinalStatement or None). #}
+{% if final %}
+  <dl class="mb-1" data-final-statement>
+    {% for label, text, grade in final.rows %}
+      <dt>{{ label }} <span class="it-status it-status-peach">{{ grade }}/10</span></dt>
+      <dd>{{ text|linebreaksbr }}</dd>
+    {% endfor %}
+  </dl>
+  <p class="small text-body-secondary mb-0">By {{ final.author.display_name|default:"the chairperson" }} · updated {{ final.updated_at|date:"Y-m-d H:i" }}</p>
+{% else %}
+  <p class="text-body-secondary mb-0">No final statement yet.</p>
+{% endif %}

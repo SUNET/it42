@@ -1,0 +1,56 @@
+{% extends "org/base.html" %}
+{% block title %}{{ seat.email }} · {{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'panel_list' %}">Review panels</a></li><li><a href="{% url 'panel_detail' panel.pk %}">{{ panel.name }}</a></li><li aria-current="page">{{ seat.email }}</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>{{ seat.display_name }} <span class="it-status it-status-peach">{{ seat.role_label }}</span></h1>
+    <p>{{ seat.email }}{% if seat.user %} · account <code>{{ seat.user.sso_subject }}</code>{% else %} · has not logged in on the reviewer site yet{% endif %}</p>
+  </div>
+</div>
+
+  <div class="it-cols">
+    <div class="it-col">
+      <div class="it-card it-card-private">
+        <h2 class="it-h2">Payment information <span class="it-status it-status-yellow">admins only</span></h2>
+        {% if profile and profile.has_payment_info %}
+          <dl class="mb-0">
+            <dt>Address</dt><dd>{{ profile.address|default:"—"|linebreaksbr }}</dd>
+            <dt>Account holder</dt><dd>{{ profile.account_holder|default:"—" }}</dd>
+            <dt>Bank</dt><dd>{{ profile.bank_name|default:"—" }}</dd>
+            <dt>IBAN</dt><dd data-iban>{{ profile.iban|default:"—" }}</dd>
+            <dt>BIC / SWIFT</dt><dd>{{ profile.bic|default:"—" }}</dd>
+          </dl>
+        {% else %}
+          <p class="text-body-secondary mb-0">Not filled in yet.</p>
+        {% endif %}
+      </div>
+      <div class="it-card it-card-private">
+        <h2 class="it-h2">Passport <span class="it-status it-status-yellow">admins only</span></h2>
+        {% if profile and profile.passport %}
+          <p class="mb-0"><a href="{% url 'seat_passport' panel.pk seat.pk %}">{{ profile.passport_name }}</a> <span class="small text-body-secondary">{{ profile.passport_size|filesizeformat }} · uploaded {{ profile.passport_uploaded_at|date:"Y-m-d H:i" }}</span></p>
+        {% else %}
+          <p class="text-body-secondary mb-0">No passport copy uploaded.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="it-col">
+      <div class="it-card">
+        <h2 class="it-h2">Topics</h2>
+        {% if profile and profile.keyword_list %}
+          <p class="it-tags mb-0">{% for k in profile.keyword_list %}<span class="it-tag-soft me-1">{{ k }}</span>{% endfor %}</p>
+        {% else %}<p class="text-body-secondary mb-0">No keywords given.</p>{% endif %}
+      </div>
+      <div class="it-card">
+        <h2 class="it-h2">Conflict and competence declarations</h2>
+        {% for d in declarations %}
+          <div class="mb-2">
+            <a href="{% url 'panel_application' panel.pk d.application.pk %}">{{ d.application.applicant_name }}</a> <span class="small text-body-secondary">({{ d.application.grant.title }})</span>:
+            {% if d.in_conflict %}<span class="it-status it-status-red">conflict</span> {{ d.conflict_reason }}{% else %}<span class="it-status it-status-green">no conflict</span>{% endif %}
+            · competence {{ d.competence_label|lower }}
+          </div>
+        {% empty %}<p class="text-body-secondary mb-0">None yet.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

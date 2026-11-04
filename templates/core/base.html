@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+Core zone root: the IT42 design tokens over Bootstrap. Pages extend one of the two
+layouts below it: core/public_base.html (static site) or core/app_base.html (applicant).
+{% endcomment %}
+{% block site_css %}<link rel="stylesheet" href="{% static 'it42/theme.css' %}">{% block layout_css %}{% endblock %}{% endblock %}
+{% block body_class %}it-body{% endblock %}

@@ -1,0 +1,37 @@
+{% load it42 %}{# One CV section in Edit data; expects `section` (sections.Section) and `entries` (ordered list). #}
+<section class="it-review-group" id="{{ section.key }}" aria-labelledby="{{ section.key }}-title">
+  <div class="it-review-group-head">
+    <h3 class="it-label" id="{{ section.key }}-title">{{ section.title }}</h3>
+    <small>{{ entries|length }} item{{ entries|length|pluralize }}</small>
+  </div>
+  {% if entries %}
+    <ol class="it-review-list cv-list" data-sortable data-reorder-url="{% url 'cv_reorder' section.key %}" aria-describedby="{{ section.key }}-hint">
+      {% for entry in entries %}
+        <li class="it-review-row cv-row" data-id="{{ entry.pk }}">
+          <span class="cv-grip" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
+          <div class="it-review-text">
+            <strong>{{ entry.summary }}{% if entry.is_imported %}<span class="it-source">{{ entry.source_label }}</span>{% endif %}</strong>
+            {% with details=entry.details %}{% if details %}<span>{{ details }}</span>{% endif %}{% endwith %}
+          </div>
+          <div class="it-review-actions">
+            <form method="post" action="{% url 'cv_move' section.key entry.pk %}">{% csrf_token %}
+              <input type="hidden" name="direction" value="up">
+              <button class="it-round-btn" type="submit" {% if forloop.first %}disabled{% endif %} aria-label="Move up">↑</button>
+            </form>
+            <form method="post" action="{% url 'cv_move' section.key entry.pk %}">{% csrf_token %}
+              <input type="hidden" name="direction" value="down">
+              <button class="it-round-btn" type="submit" {% if forloop.last %}disabled{% endif %} aria-label="Move down">↓</button>
+            </form>
+            <a class="it-round-btn" href="{% url 'cv_edit' section.key entry.pk %}" aria-label="Edit {{ entry.summary }}">{% icon "pencil-simple" %}</a>
+            <form method="post" action="{% url 'cv_delete' section.key entry.pk %}">{% csrf_token %}
+              <button class="it-round-btn" type="submit" aria-label="Delete {{ entry.summary }}">{% icon "trash" %}</button>
+            </form>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+    <p class="visually-hidden" id="{{ section.key }}-hint">Drag an entry by its handle, or use the arrows, to change the order.</p>
+    <p class="visually-hidden" aria-live="polite" data-announce></p>
+  {% endif %}
+  <a class="it-add-link" href="{% url 'cv_add' section.key %}">{% icon "plus" %}Add {{ section.singular }}</a>
+</section>

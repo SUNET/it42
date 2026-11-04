@@ -1,0 +1,23 @@
+{% extends "org/layout.html" %}
+{% load it42 %}
+{% comment %}
+The research organisation site (ro.it42.vr) in the IT42 Organization role design
+(Dashboard / Organization): the org layout with the organisation role colours. The
+organisation's name (from the directory) sits under the logo.
+{% endcomment %}
+{% block role %}organization{% endblock %}
+{% block role_name %}Organization{% endblock %}
+{% block sidebar %}
+  {% if membership %}
+    <h2 class="it-sidebar-section">Sign-off</h2>
+    <ul class="it-sidebar-list">
+      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' or active == 'request_detail' %} aria-current="page"{% endif %}>{% icon "kanban" %}Board</a></li>
+    </ul>
+    {% if is_ro_admin %}
+    <h2 class="it-sidebar-section">Manage</h2>
+    <ul class="it-sidebar-list">
+      <li><a class="it-sidebar-item" href="{% url 'people' %}"{% if active == 'people' %} aria-current="page"{% endif %}>{% icon "user-list" %}People</a></li>
+    </ul>
+    {% endif %}
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% block title %}Grants · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">Board</a></li><li aria-current="page">Grants</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Grants</h1>
+    <p>Drafts stay on this site until you publish them; a published grant is listed on it42.vr until you close it.</p>
+  </div>
+  {% if is_org_admin %}<div class="it-toolbar-actions"><a class="btn btn-primary" href="{% url 'grant_create' %}">{% icon "plus" %}New grant</a></div>{% endif %}
+</div>
+<div class="it-table-card">
+  <div class="table-responsive">
+    <table class="table it-table align-middle mb-0">
+      <thead><tr><th scope="col">Grant</th><th scope="col">Status</th><th scope="col">Deadline</th><th scope="col">Applications</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+      {% for grant in grants %}
+        <tr>
+          <td><strong>{{ grant.title }}</strong></td>
+          <td>{% if grant.status == "draft" %}{% include "includes/status_pill.html" with tone="grey" label="Unpublished" %}{% elif grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}</td>
+          <td><span class="it-meta it-meta-dark">{% icon "calendar-blank" %}{{ grant.deadline|date:"j M Y" }}</span></td>
+          <td>{{ grant.application_count }}</td>
+          <td>
+            <div class="it-row-actions">
+              {% if grant.status != 'draft' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'grant_applications' grant.pk %}">Applications</a>{% endif %}
+              {% if is_org_admin %}
+                {% if grant.status == 'draft' %}
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'grant_edit' grant.pk %}">{% icon "pencil-simple" %}Edit</a>
+                  <form method="post" action="{% url 'grant_publish' grant.pk %}">{% csrf_token %}<button class="btn btn-sm btn-primary" type="submit">Publish</button></form>
+                {% elif grant.status == 'published' %}
+                  <form method="post" action="{% url 'grant_close' grant.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Close</button></form>
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="it-files-empty">No grants yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

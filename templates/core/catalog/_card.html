@@ -1,0 +1,23 @@
+{% load it42 %}{% comment %}
+Grant card (Marketplace components / Grant card). Expects ``grant``; ``variant`` picks the
+footer pill: "urgent" (closes in N days), "new" (published today / this week) or the
+default closing date.
+{% endcomment %}
+{% with days=grant.deadline|days_until %}
+<article class="it-grant-card">
+  <span class="it-org-tile" style="--org-color: {% org_color grant.org_slug %}">{% icon "buildings" %}</span>
+  <p class="it-grant-funder">{{ grant.org_name }}</p>
+  <h3><a href="{% url 'grant_detail' grant.org_slug grant.grant_public_id %}">{{ grant.title }}</a></h3>
+  <p class="it-grant-desc">{{ grant.description }}</p>
+  <div class="it-grant-foot">
+    <div><small>Opened</small><strong>{{ grant.published_at|date:"j M" }}</strong></div>
+    {% if variant == "urgent" %}
+      <span class="it-pill it-pill-urgent">{% icon "hourglass" %}{% if days == 0 %}Closes today{% else %}Closes in {{ days }} day{{ days|pluralize }}{% endif %}</span>
+    {% elif variant == "new" %}
+      <span class="it-pill it-pill-new">{% icon "sparkle" %}{% if grant.published_at|date:"Y-m-d" == today %}New today{% else %}New this week{% endif %}</span>
+    {% else %}
+      <span class="it-pill">{% icon "calendar-blank" %}Closes {{ grant.deadline|date:"j M" }}</span>
+    {% endif %}
+  </div>
+</article>
+{% endwith %}

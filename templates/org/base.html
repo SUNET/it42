@@ -1,0 +1,19 @@
+{% extends "org/layout.html" %}
+{% load it42 %}
+{% block role %}granter{% endblock %}
+{% block role_name %}Granter{% endblock %}
+{% block sidebar %}
+  {% if is_member %}
+    <h2 class="it-sidebar-section">Grants</h2>
+    <ul class="it-sidebar-list">
+      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' %} aria-current="page"{% endif %}>{% icon "kanban" %}Board</a></li>
+      <li><a class="it-sidebar-item" href="{% url 'grant_published' %}"{% if active == 'grant_published' %} aria-current="page"{% endif %}>{% icon "squares-four" %}Published grants</a></li>
+      <li><a class="it-sidebar-item" href="{% url 'grant_list' %}"{% if active == 'grant_list' or active == 'grant_create' or active == 'grant_edit' or active == 'grant_applications' or active == 'application_detail' %} aria-current="page"{% endif %}>{% icon "hand-coins" %}Grants</a></li>
+    </ul>
+    <h2 class="it-sidebar-section">Manage</h2>
+    <ul class="it-sidebar-list">
+      <li><a class="it-sidebar-item" href="{% url 'panel_list' %}"{% if request.path|slice:":8" == "/review/" %} aria-current="page"{% endif %}>{% icon "users-three" %}Review panels</a></li>
+      {% if is_org_admin %}<li><a class="it-sidebar-item" href="{% url 'members' %}"{% if active == 'members' %} aria-current="page"{% endif %}>{% icon "user-list" %}Members</a></li>{% endif %}
+    </ul>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% comment %}
+Compare applicants (Grants / Views / Granter – Compare applicants): one row per
+application with its reviewer score. Scores are averages of the preliminary grades and
+show only once the panel's review is done; before that the row shows how many
+assessments are in. No AI score: the platform has none.
+{% endcomment %}
+{% block title %}{{ grant.title }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li><a href="{% url 'grant_applications' grant.pk %}">{{ grant.title }}</a></li><li aria-current="page">Applications</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Compare applicants</h1>
+    <p>{{ grant.title }} · {{ total }} application{{ total|pluralize }}. Sorted by reviewer score. Open an application from its row.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    {% if tabs %}
+    <nav class="it-segments" aria-label="Filter by status">
+      <a href="?"{% if not current %} aria-current="true"{% endif %}>All <span class="it-segment-count">{{ total }}</span></a>
+      {% for tab in tabs %}<a href="?status={{ tab.value }}"{% if current == tab.value %} aria-current="true"{% endif %}>{{ tab.label }} <span class="it-segment-count">{{ tab.count }}</span></a>{% endfor %}
+    </nav>
+    {% endif %}
+    <span class="it-chip-box"><span class="it-diamond" aria-hidden="true"></span>Deadline · {{ grant.deadline|date:"j M Y" }}</span>
+    <span class="it-chip-box" data-signature-deadline>{% icon "seal-check" %}Sign-off by · {{ grant.signature_deadline|date:"j M Y" }}</span>
+  </div>
+</div>
+{% if is_org_admin and grant.status != "draft" %}
+<form method="post" action="{% url 'grant_signature_deadline' grant.pk %}" class="it-inline-form">{% csrf_token %}
+  <label class="it-label mb-0" for="signature_deadline">Signature deadline</label>
+  <input class="form-control" type="date" id="signature_deadline" name="signature_deadline" value="{{ grant.signature_deadline|date:'Y-m-d' }}" min="{{ grant.deadline|date:'Y-m-d' }}" required>
+  <button class="btn btn-outline-secondary" type="submit">Move</button>
+  <span class="it-draft-meta">Administrating organisations can sign until this day; open requests are updated on their site.</span>
+</form>
+{% endif %}
+<div class="it-table-card">
+  <div class="table-responsive">
+    <table class="table it-table it-compare align-middle mb-0">
+      <thead><tr><th scope="col">Application</th><th scope="col">Reviewer score</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col"><span class="visually-hidden">Open</span></th></tr></thead>
+      <tbody>
+      {% for app, score in rows %}
+        <tr>
+          <td>
+            <strong class="it-compare-name">{{ app.applicant_name }}</strong>
+            <span class="it-meta">{{ app.applicant_email|default:"—" }}{% if app.research_org %} · {{ app.research_org|research_org_name }}{% endif %}</span>
+          </td>
+          <td data-score>
+            {% if score.average is not None %}
+              <span class="it-score"><strong>{{ score.average|floatformat:1 }}</strong><span class="it-score-bar" aria-hidden="true"><span style="width: {{ score.percent }}%"></span></span></span>
+              <span class="it-meta">avg of {{ score.submitted }} / {{ score.assigned }} review{{ score.assigned|pluralize }}</span>
+            {% elif score.assigned %}
+              <span class="it-pending">Pending</span>
+              <span class="it-meta">{{ score.submitted }} / {{ score.assigned }} review{{ score.assigned|pluralize }} in</span>
+            {% else %}
+              <span class="it-meta">No reviewers yet</span>
+            {% endif %}
+          </td>
+          <td><span data-status="{{ app.status }}">{% status_pill app.status %}</span></td>
+          <td><span class="it-meta">{{ app.submitted_at|date:"j M Y" }}</span></td>
+          <td class="text-end"><a class="it-row-link" href="{% url 'application_detail' app.pk %}" aria-label="Open the application of {{ app.applicant_name }}">{% icon "caret-right" %}</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="it-files-empty">{% if current %}No applications with this status.{% else %}No applications yet.{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

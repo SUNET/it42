@@ -1,0 +1,13 @@
+{% extends "org/review/site/base.html" %}
+{% load it42 %}
+{% block title %}Not a reviewer · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li aria-current="page">Access</li>{% endblock %}
+{% block content %}
+  <div class="it-gate">
+    <span class="it-banner-icon">{% icon "lock" %}</span>
+    <h1>You are not on any review panel of {{ ORG_NAME }}</h1>
+    <p>You are logged in as <strong>{{ user.get_full_name|default:user.username }}</strong>
+      ({{ user.email|default:user.sso_subject }}), but {{ ORG_NAME }} has not added this email to a review panel.</p>
+    <p class="it-card-note">Ask {{ ORG_NAME }} to add the email address you log in with, then reload.</p>
+  </div>
+{% endblock %}

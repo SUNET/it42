@@ -1,0 +1,156 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% block title %}{{ panel.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'panel_list' %}">Review panels</a></li><li aria-current="page">{{ panel.name }}</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>{{ panel.name }}</h1>
+    <p>{{ applications|length }} application{{ applications|length|pluralize }} · {{ seats|length }} seat{{ seats|length|pluralize }}{% if panel.description %} · {{ panel.description }}{% endif %}</p>
+  </div>
+  {% if is_admin %}
+    <div class="it-toolbar-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'panel_edit' panel.pk %}">{% icon "pencil-simple" %}Edit</a>
+      <form method="post" action="{% url 'panel_delete' panel.pk %}">{% csrf_token %}
+        <button class="btn btn-outline-danger" type="submit">{% icon "trash" %}Delete panel</button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+
+  <div class="it-cols">
+    <div class="it-col">
+      <section class="it-card" id="seats">
+        <h2 class="it-h2">Seats <span class="it-count">{{ seats|length }}</span></h2>
+        <p class="small text-body-secondary">People are added by email and log in on the reviewer site. A seat is bound to their account at their first login.</p>
+        <div class="table-responsive">
+          <table class="table it-table align-middle mb-3">
+            <thead><tr><th>Email</th><th>Account</th><th>Role</th>{% if is_admin %}<th class="text-end">Actions</th>{% endif %}</tr></thead>
+            <tbody>
+            {% for seat in seats %}
+              <tr data-seat="{{ seat.email }}">
+                <td>{% if is_admin %}<a href="{% url 'seat_detail' panel.pk seat.pk %}">{{ seat.email }}</a>{% else %}{{ seat.email }}{% endif %}</td>
+                <td>{% if seat.user %}{{ seat.user.get_full_name|default:seat.user.username }}{% else %}<span class="text-body-secondary">not logged in yet</span>{% endif %}</td>
+                <td><span class="it-status it-status-{% if seat.is_chair %}peach{% elif seat.is_support %}lavender{% else %}grey{% endif %}">{{ seat.role_label }}</span></td>
+                {% if is_admin %}
+                  <td class="text-end">
+                    <form method="post" action="{% url 'seat_role' panel.pk seat.pk %}" class="it-inline-form">{% csrf_token %}
+                      <select name="role" class="form-select form-select-sm" aria-label="Role for {{ seat.email }}">
+                        {% for value, label in roles %}<option value="{{ value }}"{% if value == seat.role %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                      </select>
+                      <button class="btn btn-sm btn-outline-primary" type="submit">Set role</button>
+                    </form>
+                    <form method="post" action="{% url 'seat_remove' panel.pk seat.pk %}" class="d-inline">{% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Remove {{ seat.email }}">Remove</button>
+                    </form>
+                  </td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">No seats yet.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if is_admin %}
+          <form method="post" action="{% url 'seat_add' panel.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+            <div class="col-sm-6">
+              <label class="form-label" for="{{ seat_form.email.id_for_label }}">Add by email</label>
+              {{ seat_form.email }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="{{ seat_form.role.id_for_label }}">Role</label>
+              {{ seat_form.role }}
+            </div>
+            <div class="col-sm-2"><button class="btn btn-primary w-100" type="submit">Add seat</button></div>
+          </form>
+        {% endif %}
+      </section>
+
+      <section class="it-card" id="applications">
+        <h2 class="it-h2">Applications <span class="it-count">{{ applications|length }}</span></h2>
+        <p class="small text-body-secondary">Every application of the attached grants. Open one to assign reviewers and to read the panel's work.</p>
+        <div class="table-responsive">
+          <table class="table it-table align-middle mb-0">
+            <thead><tr><th>Applicant</th><th>Grant</th><th>Status</th><th>Assigned</th></tr></thead>
+            <tbody>
+            {% for application, assigned in applications %}
+              <tr>
+                <td><a href="{% url 'panel_application' panel.pk application.pk %}">{{ application.applicant_name }}</a></td>
+                <td>{{ application.grant.title }}</td>
+                <td>{% status_pill application.status %}</td>
+                <td>{{ assigned }} reviewer{{ assigned|pluralize }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">No applications yet{% if not grants %}: attach a grant first{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="it-col">
+      <section class="it-card" id="grants">
+        <h2 class="it-h2">Grants</h2>
+        <ul class="list-unstyled mb-2">
+          {% for grant in grants %}
+            <li class="d-flex justify-content-between align-items-center py-1">
+              <span>{{ grant.title }}</span>
+              {% if is_admin %}
+                <form method="post" action="{% url 'panel_grant_unlink' panel.pk grant.pk %}">{% csrf_token %}
+                  <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Detach {{ grant.title }}">Detach</button>
+                </form>
+              {% endif %}
+            </li>
+          {% empty %}<li class="text-body-secondary">No grants attached.</li>{% endfor %}
+        </ul>
+        {% if is_admin and unlinked_grants %}
+          <form method="post" action="{% url 'panel_grant_link' panel.pk %}" class="d-flex gap-2">{% csrf_token %}
+            <label class="visually-hidden" for="grant_id">Grant to attach</label>
+            <select class="form-select form-select-sm" id="grant_id" name="grant_id">
+              {% for grant in unlinked_grants %}<option value="{{ grant.pk }}">{{ grant.title }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-sm btn-primary" type="submit">Attach</button>
+          </form>
+        {% endif %}
+      </section>
+
+      <section class="it-card" id="tasks">
+        <div class="it-card-head">
+          <h2 class="it-h2">Tasks</h2>
+          {% if is_admin %}<a class="btn btn-sm btn-outline-primary" href="{% url 'task_create' panel.pk %}">Add task</a>{% endif %}
+        </div>
+        {% include "org/review/_tasks.html" with edit_url="task_edit" delete_url="task_delete" can_edit=is_admin %}
+        <div class="border-top pt-2 mt-2" id="review-phase">
+          {% if review_done %}
+            <p class="small mb-2"><span class="it-status it-status-grey">review done</span>
+              {% if panel.review_closed_at %}Ended early by {{ SITE_NAME }} on {{ panel.review_closed_at|date:"Y-m-d H:i" }}.{% else %}The assessment deadline has passed.{% endif %}
+              Assessments are shared and read-only; the chairperson can write final statements while that task is open.</p>
+            {% if is_admin and panel.review_closed_at %}
+              <form method="post" action="{% url 'panel_review_reopen' panel.pk %}">{% csrf_token %}
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Undo early end</button>
+              </form>
+            {% endif %}
+          {% else %}
+            <p class="small mb-2"><span class="it-status it-status-grey">review in progress</span>
+              The final statement opens to the chairperson after the assessment deadline, or now if you end the review early.</p>
+            {% if is_admin %}
+              <form method="post" action="{% url 'panel_review_close' panel.pk %}">{% csrf_token %}
+                <button class="btn btn-sm btn-warning" type="submit">End review now</button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="it-card" id="meetings">
+        <div class="it-card-head">
+          <h2 class="it-h2">Meetings</h2>
+          {% if is_admin %}<a class="btn btn-sm btn-outline-primary" href="{% url 'meeting_create' panel.pk %}">Add meeting</a>{% endif %}
+        </div>
+        {% include "org/review/_meetings.html" with edit_url="meeting_edit" delete_url="meeting_delete" can_edit=is_admin %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

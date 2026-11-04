@@ -1,0 +1,13 @@
+.git
+.venv
+**/__pycache__
+*.sqlite3
+media
+staticfiles
+secrets
+env
+certs/*
+!certs/rootCA.pem
+rabbitmq/definitions.json
+tests
+docs

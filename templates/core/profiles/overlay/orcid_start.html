@@ -1,0 +1,20 @@
+{% load it42 %}{# Connect an ORCID iD and start an import. #}
+<div class="it-overlay">
+  <div class="it-dialog it-dialog-sm" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1" data-close="{% url 'profile' %}">
+    <header class="it-dialog-head">
+      <span class="it-orcid-badge it-orcid-badge-lg" aria-hidden="true">iD</span>
+      <div>
+        <h2 id="dialog-title">Import from ORCID</h2>
+        <p>We read your public ORCID record in the background. You check every item before it's added to your profile.</p>
+      </div>
+    </header>
+    <form method="post" action="{% url 'orcid_start' %}" novalidate>{% csrf_token %}
+      {% with form=orcid_form %}{% include "includes/form_fields.html" %}{% endwith %}
+      <p class="it-modal-note">Proof of concept: any public ORCID iD works, there is no check that it is yours. Entries you typed by hand are never changed.</p>
+      <div class="it-modal-actions">
+        <a class="btn btn-white" href="{% url 'profile' %}">Cancel</a>
+        <button class="btn btn-applicant" type="submit">Start import</button>
+      </div>
+    </form>
+  </div>
+</div>

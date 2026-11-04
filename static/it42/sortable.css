@@ -1,0 +1,28 @@
+/* Sortable CV lists (static/it42/sortable.js). */
+.cv-list .cv-row { cursor: grab; position: relative; background: var(--bs-body-bg); }
+.cv-list .cv-row:hover { background: var(--bs-tertiary-bg); }
+.cv-list .cv-row.cv-dragging {
+  cursor: grabbing;
+  z-index: 10;
+  box-shadow: var(--bs-box-shadow);
+  border: 1px solid var(--bs-primary);
+  border-radius: var(--bs-border-radius);
+  opacity: 0.95;
+}
+.cv-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 1.75rem;
+  margin: -0.5rem 0;
+  border-radius: var(--bs-border-radius);
+  font-size: 1.1rem;
+  letter-spacing: -0.2em;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* a touch on the grip drags; a touch on the text scrolls */
+}
+.cv-row:hover .cv-grip, .cv-dragging .cv-grip { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
+body.cv-sorting { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+body.cv-sorting .cv-list .cv-row { cursor: grabbing; }

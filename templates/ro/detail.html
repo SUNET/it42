@@ -1,0 +1,84 @@
+{% extends "ro/base.html" %}
+{% load it42 %}
+{% block title %}{{ req.applicant_name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'home' %}">Board</a></li><li aria-current="page">{{ req.applicant_name }}</li>{% endblock %}
+{% block content %}
+<div class="it-detail-card">
+  <aside class="it-infobar">
+    <div class="it-stage"><span class="it-stage-dot" aria-hidden="true"></span><span data-request-status="{{ req.status }}">{{ req.get_status_display }}</span></div>
+    <div>
+      <h1>{{ req.applicant_name }}</h1>
+      <p class="it-infobar-sub">Application to {{ req.grant_title }} ({{ funder }})</p>
+    </div>
+    <div class="it-infobar-block">
+      <h2 class="it-label">Details</h2>
+      <dl class="it-kv">
+        <div><dt>Researcher</dt><dd><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ req.applicant_name|initials }}</span>{{ req.applicant_name }}</dd></div>
+        <div><dt>Email</dt><dd>{{ req.applicant_email|default:"—" }}</dd></div>
+        <div><dt>Funder</dt><dd>{{ funder }}</dd></div>
+        <div><dt>Submitted</dt><dd>{{ req.submitted_at|date:"j M Y, H:i" }}</dd></div>
+        <div><dt>Sign by</dt><dd><span class="it-diamond" aria-hidden="true"></span>{{ req.deadline|date:"j M Y" }}</dd></div>
+      </dl>
+    </div>
+    {% if req.status == "pending" %}
+      {% if can_decide %}
+      <form method="post" action="{% url 'request_sign' req.pk %}" class="it-infobar-actions" data-sign-form>{% csrf_token %}
+        <label class="it-label mb-0" for="comment">Sign on behalf of {{ research_org.name }}</label>
+        <textarea class="form-control" id="comment" name="comment" rows="2" maxlength="2000" placeholder="Comment for the funder (optional)"></textarea>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="confirm" name="confirm" required>
+          <label class="form-check-label" for="confirm">{{ research_org.name }} agrees to administer this grant if it is awarded.</label>
+        </div>
+        <button class="btn btn-primary" type="submit">{% icon "seal-check" %}Sign</button>
+      </form>
+      <details class="it-decline">
+        <summary>Decline instead</summary>
+        <form method="post" action="{% url 'request_decline' req.pk %}" class="it-infobar-actions" data-decline-form>{% csrf_token %}
+          <label class="it-label mb-0" for="reason">Reason (the applicant sees it)</label>
+          <textarea class="form-control" id="reason" name="reason" rows="3" maxlength="2000" required></textarea>
+          <button class="btn btn-outline-danger" type="submit">Decline</button>
+        </form>
+      </details>
+      {% elif overdue %}
+        <div class="it-signoff it-signoff-ro_expired"><p>{% icon "warning-circle" %}<span>The deadline passed on {{ req.deadline|date:"j M Y" }}. The funder closes the request shortly.</span></p></div>
+      {% endif %}
+    {% else %}
+      <div class="it-signoff it-signoff-{{ req.status }}">
+        {% if req.status == "signed" %}
+          <p><span class="it-signoff-icon">{% icon "seal-check" %}</span><span>Signed by <strong>{{ req.decided_by }}</strong> on {{ req.decided_at|date:"j M Y, H:i" }}.</span></p>
+        {% elif req.status == "declined" %}
+          <p><span class="it-signoff-icon">{% icon "x" %}</span><span>Declined by <strong>{{ req.decided_by }}</strong> on {{ req.decided_at|date:"j M Y, H:i" }}.</span></p>
+        {% else %}
+          <p><span class="it-signoff-icon">{% icon "warning-circle" %}</span><span>Not signed by {{ req.deadline|date:"j M Y" }}; the funder closed the request.</span></p>
+        {% endif %}
+        {% if req.comment %}<blockquote class="it-signoff-note">{{ req.comment|linebreaksbr }}</blockquote>{% endif %}
+      </div>
+    {% endif %}
+  </aside>
+
+  <div class="it-detail-main">
+    <div class="it-detail-body">
+      <div class="it-stack">
+        <div class="it-block">
+          <h2>Answers</h2>
+          <dl class="it-answers">
+            {% for label, value in answers %}<dt>{{ label }}</dt><dd>{{ value|default:"—"|linebreaksbr }}</dd>{% endfor %}
+          </dl>
+        </div>
+      </div>
+      <div>
+        <div class="it-side-card">
+          <h2>Attachments</h2>
+          <ul class="it-files">
+            {% for doc in documents %}
+              <li>{% icon "file-pdf" %}<span><a href="{% url 'request_document' req.pk doc.pk %}">{{ doc.original_name }}</a></span><small>{{ doc.size|filesizeformat }}</small></li>
+            {% empty %}
+              <li class="it-files-empty">None attached.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

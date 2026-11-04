@@ -1,0 +1,74 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  {% block site_css %}{% endblock %}
+  {% block theme_style %}
+  <style>
+    :root, [data-bs-theme=light] {
+      --bs-primary: {{ THEME_COLOR }};
+      --bs-primary-rgb: {{ THEME_COLOR_RGB }};
+      --bs-link-color: {{ THEME_ACCENT }};
+      --bs-link-color-rgb: {{ THEME_ACCENT_RGB }};
+    }
+    .btn-primary {
+      --bs-btn-color: {{ THEME_ON_PRIMARY }}; --bs-btn-hover-color: {{ THEME_ON_PRIMARY }};
+      --bs-btn-active-color: {{ THEME_ON_PRIMARY }}; --bs-btn-disabled-color: {{ THEME_ON_PRIMARY }};
+      --bs-btn-bg: {{ THEME_COLOR }}; --bs-btn-border-color: {{ THEME_COLOR }};
+      --bs-btn-hover-bg: {{ THEME_COLOR }}; --bs-btn-hover-border-color: {{ THEME_COLOR }};
+      --bs-btn-active-bg: {{ THEME_COLOR }}; --bs-btn-active-border-color: {{ THEME_COLOR }};
+      --bs-btn-disabled-bg: {{ THEME_COLOR }}; --bs-btn-disabled-border-color: {{ THEME_COLOR }};
+    }
+    .btn-outline-primary {
+      --bs-btn-color: {{ THEME_ACCENT }}; --bs-btn-border-color: {{ THEME_ACCENT }};
+      --bs-btn-hover-color: {{ THEME_ON_PRIMARY }}; --bs-btn-active-color: {{ THEME_ON_PRIMARY }};
+      --bs-btn-hover-bg: {{ THEME_COLOR }}; --bs-btn-hover-border-color: {{ THEME_COLOR }};
+      --bs-btn-active-bg: {{ THEME_COLOR }}; --bs-btn-active-border-color: {{ THEME_COLOR }};
+    }
+    .navbar-site { background-color: {{ THEME_COLOR }}; }
+  </style>
+  {% endblock %}
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}bg-body-tertiary{% endblock %}">
+{% block body %}
+<nav class="navbar navbar-expand-md {% if THEME_IS_LIGHT %}navbar-light{% else %}navbar-dark{% endif %} navbar-site mb-4" data-bs-theme="{% if THEME_IS_LIGHT %}light{% else %}dark{% endif %}">
+  <div class="container">
+    <a class="navbar-brand fw-semibold" href="/">{{ SITE_NAME }}</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+            aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav me-auto">{% block navlinks %}{% endblock %}</ul>
+      <ul class="navbar-nav">
+        {% if user.is_authenticated %}
+          <li class="nav-item"><span class="navbar-text me-3">{{ user.get_full_name|default:user.username }}</span></li>
+          <li class="nav-item">
+            <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+              <button class="btn btn-sm btn-outline-{% if THEME_IS_LIGHT %}dark{% else %}light{% endif %}" type="submit">Log out</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="nav-item"><a class="btn btn-sm btn-{% if THEME_IS_LIGHT %}dark{% else %}light{% endif %}" href="{% url 'saml2_login' %}?next={{ request.get_full_path|urlencode }}">Log in</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+<main class="container pb-5">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %}" role="alert">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+{% endblock body %}
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

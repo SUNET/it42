@@ -1,0 +1,42 @@
+{# One panel on My review panels (Dashboard / Reviewer); expects `card` from site_views._panel_summary. #}
+{% load it42 %}
+{% with panel=card.panel seat=card.seat p=card.progress %}
+<article class="it-panel-card" data-panel="{{ panel.name }}">
+  <div class="it-panel-card-top">
+    {% include "includes/status_pill.html" with tone=card.tone label=card.phase %}
+    <span class="it-tag-soft">{{ seat.role_label }}</span>
+  </div>
+  <div>
+    <h2 class="it-panel-card-title"><a href="{% url 'review_panel' panel.pk %}">{{ panel.name }}</a></h2>
+    <p class="it-panel-card-sub">{{ card.application_count }} application{{ card.application_count|pluralize }} to review · Chair: {% if card.chair == "You" %}You{% elif card.chair %}{{ card.chair.display_name }}{% else %}not set{% endif %}</p>
+  </div>
+  <p class="it-panel-card-tasks">{% if card.open_tasks %}Open now: {% for t in card.open_tasks %}{{ t.title }} (until {{ t.ends_at|date:"j M, H:i" }}){% if not forloop.last %}; {% endif %}{% endfor %}{% else %}No task is open right now.{% endif %}</p>
+  {% if card.next_meeting %}
+    {% with m=card.next_meeting %}
+    <div class="it-meeting">
+      <span class="it-date-tile"><span>{{ m.starts_at|date:"M" }}</span>{{ m.starts_at|date:"j" }}</span>
+      <div><strong>{{ m.title }}</strong><span>{{ m.starts_at|date:"D H:i" }}{% if m.ends_at %}–{{ m.ends_at|date:"H:i" }}{% endif %}{% if m.location %} · {{ m.location }}{% endif %}</span></div>
+      <span class="it-when">{{ m.starts_at|relday }}</span>
+    </div>
+    {% endwith %}
+  {% else %}
+    <div class="it-meeting it-meeting-none">{% icon "calendar-blank" %}<div><strong>No upcoming meeting</strong></div></div>
+  {% endif %}
+  {% if seat.reviews %}
+    <div class="it-bar-row"><span>My reviews</span><strong>{{ p.done }} / {{ p.mine }} · {{ p.pct }}%</strong></div>
+    <div class="it-bar it-bar-mine" role="progressbar" aria-label="My reviews" aria-valuenow="{{ p.pct }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ p.pct }}%"></span></div>
+  {% endif %}
+  <div class="it-bar-row"><span>Panel progress</span><strong>{{ p.panel_done }} / {{ p.panel_total }} · {{ p.panel_pct }}%</strong></div>
+  <div class="it-bar" role="progressbar" aria-label="Panel progress" aria-valuenow="{{ p.panel_pct }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ p.panel_pct }}%"></span></div>
+  <dl class="it-tiles">
+    <div><dt>Your deadline</dt><dd>{% if not seat.reviews %}—{% elif card.assessment %}{% if p.mine and not p.left %}Submitted{% else %}{{ card.assessment.ends_at|date:"D j M" }}{% endif %}{% else %}Not set{% endif %}</dd></div>
+    <div><dt>Left to score</dt><dd>{{ p.left }}</dd></div>
+    <div><dt>Declared</dt><dd>{{ p.declared }}</dd></div>
+  </dl>
+  <div class="it-panel-card-foot">
+    <span class="it-avatars" aria-hidden="true">{% for m in card.reviewers|slice:":6" %}<span class="it-avatar it-avatar-sm">{{ m.display_name|initials }}</span>{% endfor %}</span>
+    <span class="it-meta">{{ card.reviewers|length }} reviewer{{ card.reviewers|length|pluralize }}</span>
+    <a class="it-panel-card-open" href="{% url 'review_panel' panel.pk %}" aria-label="Open {{ panel.name }}">Open panel {% icon "arrow-right" %}</a>
+  </div>
+</article>
+{% endwith %}
