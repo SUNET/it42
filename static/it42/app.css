@@ -35,6 +35,30 @@
 .it-sidebar-item:hover, .it-sidebar-item[aria-current] { background: var(--it-black-4); }
 .it-sidebar-item:focus-visible { outline: 2px solid var(--it-midnight); outline-offset: 1px; }
 
+/* Persistent controls for the left navigation and optional right panel. */
+.it-panel-toggle {
+  position: absolute; top: calc(100% + 4px); z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 44px; padding: 0; cursor: pointer;
+  border: 1px solid var(--it-black-10); background: var(--it-white-100); color: var(--it-black-80);
+}
+.it-panel-toggle-left { left: 0; border-left: 0; border-radius: 0 var(--it-radius-8) var(--it-radius-8) 0; }
+.it-panel-toggle-right { right: 0; border-right: 0; border-radius: var(--it-radius-8) 0 0 var(--it-radius-8); }
+.it-panel-toggle-icon { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-right: 6px solid currentColor; }
+.it-panel-toggle-left[aria-expanded="false"] .it-panel-toggle-icon,
+.it-panel-toggle-right[aria-expanded="true"] .it-panel-toggle-icon { transform: rotate(180deg); }
+.it-panel-toggle:hover { background: var(--it-black-4); }
+.it-panel-toggle:focus-visible { outline: 2px solid var(--it-midnight); outline-offset: 2px; }
+.it-panels-ready > .it-sidebar[hidden], .it-panels-ready > .it-panel[hidden] { display: none; }
+.it-panels-ready > .it-panel:not([hidden]) { display: flex; }
+.it-panels-ready .it-topbar { position: relative; flex-wrap: wrap; }
+.it-panels-ready .it-topbar > nav { flex: 1 1 auto; }
+@media (max-width: 991.98px) {
+  .it-panel-toggle { top: 50%; transform: translateY(-50%); }
+  .it-panels-ready .it-topbar { padding-inline: 36px; }
+  .it-panels-ready > .it-panel { width: auto; border-left: 0; border-top: 1px solid var(--it-black-10); }
+}
+
 /* Main column and top bar */
 .it-app-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .it-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 28px; border-bottom: 1px solid var(--it-black-10); }
