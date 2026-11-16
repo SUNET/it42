@@ -1,0 +1,108 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% comment %}
+Grant drafts (Grants / Drafts): folders, then the grants of the chosen folder (or all of
+them) as cards, filtered by status. Folder and grant actions are plain POST forms inside
+<details> menus, so everything works without JavaScript.
+{% endcomment %}
+{% block title %}Grant drafts · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">Drafts</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Grant drafts</h1>
+    <p>Create grants, sort them into folders and publish them when they're ready.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    <details class="it-popover">
+      <summary class="btn btn-outline-secondary">{% icon "folder-plus" %}New folder</summary>
+      <form method="post" action="{% url 'folder_create' %}" class="it-popover-body">{% csrf_token %}
+        <label class="form-label" for="new-folder-name">Folder name</label>
+        <input class="form-control" id="new-folder-name" name="name" maxlength="100" required>
+        <button class="btn btn-primary" type="submit">Create folder</button>
+      </form>
+    </details>
+    <a class="btn btn-primary" href="{% url 'grant_create' %}">{% icon "plus" %}New grant</a>
+  </div>
+</div>
+
+<section class="it-drafts-section" aria-labelledby="folders-title">
+  <div class="it-row-head">
+    <h2 id="folders-title">Folders</h2>
+    <p class="it-band-meta">{{ folders|length }} folder{{ folders|length|pluralize }} · {{ total }} grant{{ total|pluralize }}</p>
+  </div>
+  {% if folders %}
+  <ul class="it-folder-grid">
+    {% for f in folders %}
+      <li class="it-folder-card{% if folder and folder.pk == f.pk %} is-active{% endif %}">
+        <a class="it-folder-link" href="{% url 'grant_drafts' %}?folder={{ f.pk }}{% if status != 'all' %}&amp;status={{ status }}{% endif %}">
+          <span class="it-folder-icon" aria-hidden="true">{% icon "folder" %}</span>
+          <strong>{{ f.name }}</strong>
+          <span class="it-folder-meta">{{ f.grant_count }} grant{{ f.grant_count|pluralize }} · {% if f.published_count %}{{ f.published_count }} published{% else %}none published{% endif %}</span>
+        </a>
+        <details class="it-menu">
+          <summary aria-label="Actions for {{ f.name }}">{% icon "dots-three" %}</summary>
+          <div class="it-menu-list">
+            <form method="post" action="{% url 'folder_rename' f.pk %}" class="it-menu-form">{% csrf_token %}
+              <label class="visually-hidden" for="rename-folder-{{ f.pk }}">New name</label>
+              <input class="form-control form-control-sm" id="rename-folder-{{ f.pk }}" name="name" value="{{ f.name }}" maxlength="100" required>
+              <button class="btn btn-sm btn-light" type="submit">Rename</button>
+            </form>
+            <form method="post" action="{% url 'folder_delete' f.pk %}">{% csrf_token %}<button class="it-menu-item it-menu-danger" type="submit">{% icon "trash" %}Delete folder</button></form>
+          </div>
+        </details>
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <p class="it-files-empty">No folders yet. Folders keep related grants together; a grant can also stay outside them.</p>
+  {% endif %}
+</section>
+
+<section class="it-drafts-section" aria-labelledby="grants-title">
+  <div class="it-row-head">
+    <h2 id="grants-title">{% if folder %}{{ folder.name }}{% else %}All grants{% endif %} <span class="it-count">{{ grants|length }}</span></h2>
+    <nav class="it-tabs it-tabs-inline" aria-label="Filter by status">
+      <a href="?{% if folder %}folder={{ folder.pk }}&amp;{% endif %}status=all"{% if status == "all" %} aria-selected="true"{% endif %}>All</a>
+      <a href="?{% if folder %}folder={{ folder.pk }}&amp;{% endif %}status=published"{% if status == "published" %} aria-selected="true"{% endif %}>Published</a>
+      <a href="?{% if folder %}folder={{ folder.pk }}&amp;{% endif %}status=unpublished"{% if status == "unpublished" %} aria-selected="true"{% endif %}>Unpublished</a>
+    </nav>
+  </div>
+  <ul class="it-draft-grid">
+    {% for grant in grants %}
+      <li class="it-draft-card">
+        <div class="it-draft-card-top">
+          {% if grant.category %}<span class="it-tag-soft">{{ grant.category.name }}</span>{% else %}<span></span>{% endif %}
+          <details class="it-menu">
+            <summary aria-label="Actions for {{ grant.title }}">{% icon "dots-three" %}</summary>
+            <div class="it-menu-list">
+              {% if grant.status == "draft" %}
+                <a class="it-menu-item" href="{% url 'grant_edit' grant.pk %}">{% icon "pencil-simple" %}Edit</a>
+                <form method="post" action="{% url 'grant_publish' grant.pk %}">{% csrf_token %}<button class="it-menu-item" type="submit">{% icon "seal-check" %}Publish</button></form>
+              {% else %}
+                <a class="it-menu-item" href="{% url 'grant_applications' grant.pk %}">{% icon "file-text" %}Applications</a>
+                {% if grant.status == "published" %}<form method="post" action="{% url 'grant_close' grant.pk %}">{% csrf_token %}<button class="it-menu-item it-menu-danger" type="submit">{% icon "lock" %}Close</button></form>{% endif %}
+              {% endif %}
+              <form method="post" action="{% url 'grant_duplicate' grant.pk %}">{% csrf_token %}<button class="it-menu-item" type="submit">{% icon "copy" %}Duplicate</button></form>
+            </div>
+          </details>
+        </div>
+        <h3><a href="{% if grant.status == 'draft' %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
+        <p class="it-draft-card-text">{{ grant.description|truncatewords:18 }}</p>
+        <div class="it-draft-card-foot">
+          {% if grant.status == "draft" %}{% include "includes/status_pill.html" with tone="grey" label="Unpublished" %}{% elif grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}
+          <span class="it-draft-card-meta">{{ grant.field_count }} field{{ grant.field_count|pluralize }} · Edited {{ grant.updated_at|timesince }} ago</span>
+        </div>
+      </li>
+    {% endfor %}
+    <li class="it-draft-card it-draft-card-new">
+      <a href="{% url 'grant_create' %}">
+        <span class="it-draft-new-icon" aria-hidden="true">{% icon "plus" %}</span>
+        <strong>Create a grant</strong>
+        <span>Starts with a summary, deadline and link field</span>
+      </a>
+    </li>
+  </ul>
+</section>
+<p class="it-drafts-links"><a href="{% url 'template_list' %}">Saved templates</a> · <a href="{% url 'category_list' %}">Categories</a></p>
+{% endblock %}

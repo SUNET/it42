@@ -1,5 +1,5 @@
 import functools
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from django import template
 from django.conf import settings
@@ -106,3 +106,22 @@ def relday(value: datetime | date) -> str:
 def research_org_name(slug: str) -> str:
     """A research organisation's name from the directory (the slug if unknown)."""
     return research_orgs.name_of(slug) if slug else ""
+
+
+@register.filter
+def amount(value: object) -> str:
+    """A money amount with thousands separators: ``42000`` -> ``42 000``."""
+    from it42.common.formschema import format_amount
+
+    try:
+        return format_amount(str(value))
+    except (ArithmeticError, ValueError):
+        return str(value)
+
+
+@register.filter
+def closing_timezone(value: date | None, at_time: time | None = None) -> str:
+    """Use the deadline's daylight-saving offset, not today's offset."""
+    if not value:
+        return timezone.get_current_timezone_name()
+    return timezone.make_aware(datetime.combine(value, at_time or time(17))).tzname() or ""

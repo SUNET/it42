@@ -45,13 +45,13 @@
         <h2 id="about-call">About this call</h2>
         <div class="it-prose">{{ grant.description|linebreaks }}</div>
       </section>
-      {% if grant.form_schema %}
+      {% if asks_for %}
       <section aria-labelledby="asks-for">
         <h2 id="asks-for">What the application asks for</h2>
         <ul class="it-check-rows">
-          {% for f in grant.form_schema %}{% if f.type != "heading" and f.type != "paragraph" %}
+          {% for f in asks_for %}
             <li>{% icon "check-circle" %}{{ f.label }}{% if f.required %}<small>Required</small>{% endif %}</li>
-          {% endif %}{% endfor %}
+          {% endfor %}
         </ul>
       </section>
       {% endif %}
@@ -59,7 +59,7 @@
         <h2 id="dates">Important dates</h2>
         <ol class="it-dates">
           <li><span class="it-date-dot"></span><div><strong>{{ grant.published_at|date:"j M Y" }}</strong></div><div><strong>Call opens</strong><span>The call was published on IT42.</span></div></li>
-          <li class="it-date-current"><span class="it-date-dot"></span><div><strong>{{ grant.deadline|date:"j M Y" }}</strong></div><div><strong>Call closes</strong><span>Send your application by this date. Late applications can't be sent.</span></div></li>
+          <li class="it-date-current"><span class="it-date-dot"></span><div><strong>{{ grant.deadline|date:"j M Y" }}</strong>{% if grant.deadline_time %}<span>{{ grant.deadline_time|time:"H:i" }} {{ grant.deadline|closing_timezone:grant.deadline_time }}</span>{% endif %}</div><div><strong>Call closes</strong><span>Send your application by this {% if grant.deadline_time %}time{% else %}date{% endif %}. Late applications can't be sent.</span></div></li>
         </ol>
       </section>
     </div>
@@ -77,7 +77,7 @@
         <dl class="it-facts">
           <div><dt>Funder</dt><dd>{{ grant.org_name }}</dd></div>
           <div><dt>Opens</dt><dd>{{ grant.published_at|date:"j M Y" }}</dd></div>
-          <div><dt>Closes</dt><dd>{{ grant.deadline|date:"j M Y" }}</dd></div>
+          <div><dt>Closes</dt><dd>{{ grant.deadline|date:"j M Y" }}{% if grant.deadline_time %}, {{ grant.deadline_time|time:"H:i" }} {{ grant.deadline|closing_timezone:grant.deadline_time }}{% endif %}</dd></div>
         </dl>
         {% if application %}
           <a class="btn btn-dark" href="{% url 'my_application' application.public_id %}">View your application</a>

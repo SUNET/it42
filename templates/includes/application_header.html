@@ -1,0 +1,11 @@
+{% load it42 %}
+<header class="it-preview-call">
+  <span class="it-eyebrow">{% if applicant_mode %}Your application · Draft{% else %}Open call · {{ org_name }}{% endif %}</span>
+  <h1>{{ title }}</h1>
+  {% if description %}<p>{{ description }}</p>{% endif %}
+  <div class="it-preview-chips">
+    {% if grant.deadline %}<span class="it-preview-chip" title="{{ deadline_zone }}">{% icon "calendar-blank" %}Closes {{ grant.deadline|date:"j F Y" }}{% if grant.deadline_time %}, {{ grant.deadline_time|time:"H:i" }}{% endif %} {{ grant.deadline|closing_timezone:grant.deadline_time }}</span>{% endif %}
+    {% if max_award %}<span class="it-preview-chip">{% icon "coins" %}Up to {{ max_award.amount|amount }} {{ max_award.currency }}</span>{% endif %}
+    {% for link in links %}<a class="it-preview-chip" href="{{ link.url }}" target="_blank" rel="noopener" title="{{ link.label }}">{% icon "link" %}{{ link.text }}</a>{% endfor %}
+  </div>
+</header>

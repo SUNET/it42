@@ -27,8 +27,11 @@ def from_org(request: SignatureRequest, type: str, sender: str = "o1", **payload
 
 
 def test_ro_queues_and_sender() -> None:
-    assert inbound_queues() == ["o1-to-ro", "o2-to-ro"]
+    assert inbound_queues() == ["o1-to-ro", "o2-to-ro", "o3-to-ro", "o4-to-ro", "o5-to-ro"]
     assert sender_of("o2-to-ro") == "o2"
+    assert sender_of("o3-to-ro") == "o3"
+    assert sender_of("o4-to-ro") == "o4"
+    assert sender_of("o5-to-ro") == "o5"
     for other in ("ro-to-o1", "core-to-o1", "o1-to-core"):
         with pytest.raises(ValueError):
             sender_of(other)

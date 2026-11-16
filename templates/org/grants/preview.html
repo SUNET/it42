@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static it42 %}
+{% comment %}
+Preview as applicant (Grants / Applicant view – Preview): the posted form rendered the way
+applicants will see it, with the call's header card, numbered question cards and submit
+turned off. Nothing here is saved or sent.
+
+The builder opens it in an overlay (an iframe, ``?embed=1``: no bar of its own; Escape and
+"Back to editing" are the builder's). Without JavaScript the Preview button opens this
+page in a new tab instead, with the dark bar on top: Escape or "Back to editing" closes
+the tab, or goes back to the builder when the tab cannot be closed.
+{% endcomment %}
+{% block title %}Preview: {{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block site_css %}<link rel="stylesheet" href="{% static 'it42/theme.css' %}"><link rel="stylesheet" href="{% static 'it42/app.css' %}"><link rel="stylesheet" href="{% static 'it42/org.css' %}"><link rel="stylesheet" href="{% static 'it42/application-form.css' %}">{% endblock %}
+{% block theme_style %}<style>:root { --it-org-color: {{ THEME_COLOR }}; }</style>{% endblock %}
+{% block body_class %}it-body it-granter it-preview-page{% endblock %}
+{% block body %}
+{% if not embed %}
+<header class="it-preview-bar">
+  <div>
+    <p class="it-preview-bar-title">{% if published_preview %}Published — {{ title }} is open for applications{% else %}Preview — this is what applicants will see{% endif %}</p>
+    <p class="it-preview-bar-sub">{% if published_preview %}This is the published form. Test answers here are not saved.{% else %}Nothing is published yet. Answers you type here aren't saved.{% endif %}</p>
+  </div>
+  <div class="it-preview-bar-actions">
+    {% if published_preview %}<a class="btn btn-light" href="{{ back_url }}">Back to grant</a><a class="btn btn-primary" href="{{ public_url }}">View in Open calls</a>{% else %}<a class="btn btn-light" href="{{ back_url }}" data-preview-back>Back to editing</a>{% endif %}
+  </div>
+</header>
+{% endif %}
+<main class="it-preview-main" aria-label="Application form preview">
+  {% include "includes/application_header.html" %}
+  <p class="it-preview-count">{{ counts.questions }} question{{ counts.questions|pluralize }} · {{ counts.required }} required</p>
+  <form class="it-preview-form" onsubmit="return false" novalidate>
+    {% include "includes/application_questions.html" %}
+    <div class="it-preview-foot">
+      <span>{% if published_preview %}This is a read-only view of the published form{% else %}Submit is turned off in preview{% endif %}</span>
+      <button class="btn btn-light" type="button" disabled>Save draft</button>
+      <button class="btn btn-primary" type="button" disabled>Submit application</button>
+    </div>
+  </form>
+</main>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'it42/combobox.js' %}"></script>
+<script src="{% static 'it42/budget.js' %}"></script>
+<script src="{% static 'it42/wordcount.js' %}"></script>
+<script>
+  // Escape (or "Back to editing") leaves the preview: tell the builder's overlay to close
+  // this iframe, or close the tab the no-JavaScript fallback opened, or go back.
+  // In the overlay this document is about:srcdoc, whose own origin reads as "null", so
+  // the message goes to any origin; it carries nothing but the fixed close token and the
+  // builder only accepts it from its own origin (the iframe shares it).
+  (function () {
+    "use strict";
+    var embedded = window.parent !== window;
+    function leave() {
+      if (embedded) window.parent.postMessage("it42-preview-close", "*");
+      else if (window.opener) window.close();
+      else window.location.href = "{{ back_url|escapejs }}";
+    }
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") { event.preventDefault(); leave(); }
+    }, true);
+    var back = document.querySelector("[data-preview-back]");
+    if (back) back.addEventListener("click", function (event) { event.preventDefault(); leave(); });
+  })();
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "org/layout.html" %}
-{% load it42 %}
+{% load static it42 %}
 {% comment %}
 The research organisation site (ro.it42.vr) in the IT42 Organization role design
 (Dashboard / Organization): the org layout with the organisation role colours. The
@@ -20,4 +20,8 @@ organisation's name (from the directory) sits under the logo.
     </ul>
     {% endif %}
   {% endif %}
+{% endblock %}
+{% block extra_scripts %}
+  {{ block.super }}
+  <script src="{% static 'it42/logout.js' %}" data-logout-url="{% url 'logout' %}"></script>
 {% endblock %}

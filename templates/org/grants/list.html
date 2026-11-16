@@ -6,7 +6,7 @@
 <div class="it-toolbar">
   <div>
     <h1>Grants</h1>
-    <p>Drafts stay on this site until you publish them; a published grant is listed on it42.vr until you close it.</p>
+    <p>Drafts stay on this site until you publish them; a published grant is listed on {{ CORE_SITE_HOST }} until you close it.</p>
   </div>
   {% if is_org_admin %}<div class="it-toolbar-actions"><a class="btn btn-primary" href="{% url 'grant_create' %}">{% icon "plus" %}New grant</a></div>{% endif %}
 </div>

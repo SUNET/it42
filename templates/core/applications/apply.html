@@ -1,86 +1,42 @@
 {% extends "core/app_base.html" %}
 {% load static it42 %}
 {% block title %}Apply: {{ grant.title }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<li><a href="{% url 'calls' %}">Open calls</a></li><li><a href="{% url 'grant_detail' grant.org_slug grant.grant_public_id %}">{{ grant.title }}</a></li><li aria-current="page">Apply</li>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'it42/application-form.css' %}">{% endblock %}
+{% block crumbs %}<li><a href="{% url 'calls' %}">Open calls</a></li><li aria-current="page">{{ grant.title }} · My application</li>{% endblock %}
 {% block content %}
-<form method="post" class="it-detail-card" novalidate>{% csrf_token %}
-  <aside class="it-infobar">
-    <div class="it-stage"><span class="it-stage-dot" style="background: var(--it-granter-1)" aria-hidden="true"></span><span data-status="draft">{% if draft %}Draft{% else %}New application{% endif %}</span><span>· Stage 1 of 5</span></div>
-    <div>
-      <h1>Apply: {{ grant.title }}</h1>
-      <p class="it-infobar-sub">Your application to {{ grant.org_name }}</p>
-    </div>
-    <div>
-      <h2 class="it-label">Your progress</h2>
-      <ol class="it-progress">
-        <li class="is-current"><span class="it-progress-dot" aria-hidden="true"></span><span>Draft</span><small>{% if draft %}Saved {{ draft.updated_at|date:"j M" }}{% else %}Not saved{% endif %}</small></li>
-        <li class="is-todo"><span class="it-progress-dot" aria-hidden="true"></span><span>Submitted</span><small>Due {{ grant.deadline|date:"j M" }}</small></li>
-        <li class="is-todo"><span class="it-progress-dot" aria-hidden="true"></span><span>Received by the funder</span><small>After you submit</small></li>
-        <li class="is-todo"><span class="it-progress-dot" aria-hidden="true"></span><span>In review</span><small>After it is received</small></li>
-        <li class="is-todo"><span class="it-progress-dot" aria-hidden="true"></span><span>Decision</span><small>After the review</small></li>
-      </ol>
-    </div>
-    <div class="it-infobar-block">
-      <h2 class="it-label">Details</h2>
-      <dl class="it-kv">
-        <div><dt>Applicant</dt><dd><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ user.get_full_name|default:user.username|initials }}</span>{{ user.get_full_name|default:user.username }} (you)</dd></div>
-        <div><dt>Funder</dt><dd>{{ grant.org_name }}</dd></div>
-        <div><dt>Call closes</dt><dd><span class="it-diamond" aria-hidden="true"></span>{{ grant.deadline|date:"j M Y" }}</dd></div>
-        <div><dt>Submitted</dt><dd>Not yet</dd></div>
-      </dl>
-    </div>
-    <label class="it-confirm it-confirm-inline{% if confirm_missing %} border-danger{% endif %}" for="confirm">
-      <input class="form-check-input" type="checkbox" id="confirm" name="confirm" required>
-      <span>I confirm my application is complete and ready to submit. I can't edit it afterwards.</span>
-    </label>
-    <div class="it-infobar-actions">
-      <button class="btn btn-applicant" type="submit" name="submit" data-submit-open>Submit application</button>
+<form method="post" class="it-application" id="application-form" novalidate>{% csrf_token %}
+  <div class="it-application-main">
+    {% include "includes/application_header.html" with applicant_mode=True %}
+    {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="it-preview-form">{% include "includes/application_questions.html" %}</div>
+    <div class="it-preview-foot">
+      <span data-save-status role="status">{% if draft %}Saved {{ draft.updated_at|timesince }} ago{% else %}Your answers save automatically{% endif %}</span>
       <button class="btn btn-light" type="submit" name="save_draft" formnovalidate>Save draft</button>
-      {% if draft %}
-        <button class="btn btn-link text-body-secondary" type="submit" form="delete-draft">Delete draft</button>
-        <p class="it-draft-meta">Draft saved {{ draft.updated_at|date:"j M Y, H:i" }}. Only you can see it.</p>
-      {% else %}
-        <p class="it-draft-meta">A draft stays with you; nothing is sent until you submit.</p>
-      {% endif %}
+      <button class="btn btn-primary" type="submit" name="submit" data-submit-open>Submit application</button>
     </div>
-  </aside>
-
-  <div class="it-detail-main">
-    <div class="it-detail-body">
-      <div class="it-stack">
-        <div class="it-about-grant">
-          <span class="it-label mb-0">About the grant</span>
-          <h2>{{ grant.title }}</h2>
-          <p>{{ grant.description|truncatewords:60 }}</p>
-          <div class="it-facts-row"><span class="it-fact">Funder  {{ grant.org_name }}</span><span class="it-fact">Closes  {{ grant.deadline|date:"j M Y" }}</span></div>
-        </div>
-        <div class="it-block it-form-card">
-          <h2>Your application</h2>
-          <p class="text-body-secondary">Your answers and the documents you pick are sent to {{ grant.org_name }}.</p>
-          {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
-          {% for row in rows %}{% include "includes/dynamic_field.html" %}{% endfor %}
-        </div>
-      </div>
-      <div>
-        {% with field=form.documents %}
-        <fieldset class="it-side-card">
-          <legend class="it-side-legend">{{ field.label }}</legend>
-          <ul class="it-files">
-            {% for choice in field %}
-              <li>{% icon "file-pdf" %}<span class="form-check mb-0">{{ choice.tag }}<label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label></span></li>
-            {% empty %}
-              <li class="it-files-empty">You have no PDFs yet.</li>
-            {% endfor %}
-          </ul>
-          <div class="form-text">{{ field.help_text }} <a href="{% url 'profile' %}#documents">Go to your profile</a>.</div>
-          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-        </fieldset>
-        {% endwith %}
-      </div>
-    </div>
+    <label class="it-confirm it-confirm-inline" for="confirm"><input type="checkbox" id="confirm" name="confirm" required> I confirm my application is complete and ready to submit. I can't edit it afterwards.</label>
   </div>
-
-  {# Submit your application (Card detail / Applicant – Submit application): static/it42/submit.js opens it instead of submitting at once; without JavaScript the confirm box above is used. #}
+  <aside class="it-application-progress" aria-label="Your application">
+    <div class="it-preview-q-head"><h2>Your application</h2><span class="it-preview-pill">Draft</span></div>
+    <p data-progress-count>0 of {{ counts.required }} required questions answered</p>
+    <progress value="0" max="{{ counts.required|default:1 }}" data-progress aria-label="Required questions answered"></progress>
+    <nav aria-label="Questions"><ol>
+      {% for row in rows %}{% if row.kind == "question" %}<li><a href="#question-{{ row.number }}">{{ row.number }}. {{ row.spec.label }}<span data-progress-for="{{ row.number }}">{% if row.spec.required %}Required{% else %}Optional{% endif %}</span></a></li>{% endif %}{% endfor %}
+    </ol></nav>
+    <p class="it-application-deadline">{% icon "calendar-blank" %}Closes {{ grant.deadline|date:"j M Y" }}{% if grant.deadline_time %}, {{ grant.deadline_time|time:"H:i" }}{% endif %} {{ grant.deadline|closing_timezone:grant.deadline_time }} ({{ deadline_zone }})</p>
+    {% if identity_rows %}<details class="it-application-identity"{% if form.errors or not draft %} open{% endif %}>
+      <summary>Applying as {{ user.get_full_name|default:user.username }}</summary>
+      <p>Check your contact details and the organisation that will sign your application.</p>
+      {% for row in identity_rows %}{% include "includes/dynamic_field.html" %}{% endfor %}
+    </details>{% endif %}
+    {% if form.documents.field.queryset.exists %}<details class="it-application-identity"><summary>Attach documents from your profile</summary>
+      {% for choice in form.documents %}<div class="form-check">{{ choice.tag }}<label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label></div>{% endfor %}
+      {% for error in form.documents.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </details>{% endif %}
+    <span data-save-status role="status">{% if draft %}Saved {{ draft.updated_at|timesince }} ago{% else %}Not saved yet{% endif %}</span>
+    <a class="btn btn-primary" href="#question-1" data-continue>Continue question 1</a>
+    {% if draft %}<button class="btn btn-link" type="submit" form="delete-draft">Delete draft</button>{% endif %}
+  </aside>
   <dialog class="it-modal" id="submit-dialog" aria-labelledby="submit-title" data-deadline="{{ grant.deadline|date:'j M Y' }}">
     <h2 id="submit-title">Submit your application</h2>
     <p class="it-modal-sub">{{ grant.title }} · to {{ grant.org_name }}</p>
@@ -100,8 +56,6 @@
     </div>
   </dialog>
 </form>
-{% if draft %}
-  <form method="post" action="{% url 'delete_draft' draft.pk %}" id="delete-draft" hidden>{% csrf_token %}</form>
-{% endif %}
+{% if draft %}<form method="post" action="{% url 'delete_draft' draft.pk %}" id="delete-draft" hidden>{% csrf_token %}</form>{% endif %}
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'it42/combobox.js' %}"></script><script src="{% static 'it42/submit.js' %}"></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'it42/combobox.js' %}"></script><script src="{% static 'it42/budget.js' %}"></script><script src="{% static 'it42/wordcount.js' %}"></script><script src="{% static 'it42/submit.js' %}"></script><script src="{% static 'it42/application-form.js' %}"></script>{% endblock %}

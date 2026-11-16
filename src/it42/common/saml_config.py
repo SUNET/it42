@@ -15,7 +15,7 @@ DIGEST_SHA256 = "http://www.w3.org/2001/04/xmlenc#sha256"
 
 # The test IdP lives at idp.<IT42_DOMAIN> (compose passes the domain to every container).
 IT42_DOMAIN = os.environ.get("IT42_DOMAIN") or "it42.vr"
-IDP_ENTITY_ID = f"https://idp.{IT42_DOMAIN}/metadata"
+IDP_ENTITY_ID = f"https://idp.{IT42_DOMAIN}/idp/metadata"
 
 # SAML attribute (friendly name) -> User fields. The IdP only issues transient
 # NameIDs, so the stable subject is the ``uid`` attribute.
@@ -43,8 +43,7 @@ def build_saml_config(
                     "assertion_consumer_service": [
                         (f"{site_url}/saml2/acs/", BINDING_HTTP_POST),
                     ],
-                    # idp2 answers LogoutRequests with a signed LogoutResponse,
-                    # POSTed here.
+                    # Endpoint for federated logout when supported by the IdP.
                     "single_logout_service": [
                         (f"{site_url}/saml2/ls/post/", BINDING_HTTP_POST),
                     ],
@@ -54,7 +53,7 @@ def build_saml_config(
                 "authn_requests_signed": True,
                 "logout_requests_signed": True,
                 "want_logout_response_signed": True,
-                "want_response_signed": True,
+                "want_response_signed": False,  # Django IdP signs the assertion.
                 "want_assertions_signed": True,
                 "allow_unsolicited": False,
                 "required_attributes": ["uid"],

@@ -825,8 +825,8 @@ def check_logout() -> None:
     check(browser.has_idp_session(f"fo1.{DOMAIN}"), "after logging in, the IdP session gives SSO")
     page, posted = browser.logout(DOMAIN)
     check(
-        posted == [f"https://idp.{DOMAIN}/slo", f"https://{DOMAIN}/saml2/ls/post/"],
-        f"logout went SP -> IdP /slo -> SP /saml2/ls/post/ ({posted})",
+        posted == [f"https://idp.{DOMAIN}/idp/slo/", f"https://{DOMAIN}/saml2/ls/post/"],
+        f"logout went SP -> IdP /idp/slo/ -> SP /saml2/ls/post/ ({posted})",
     )
     check(
         page.url == f"https://{DOMAIN}/"

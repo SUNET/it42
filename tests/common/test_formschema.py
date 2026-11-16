@@ -7,16 +7,22 @@ from django import forms
 
 from it42.common.formschema import (
     BASE_FIELDS,
+    DEFAULT_FIELDS,
     FIELD_TYPES,
+    LAYOUT_TYPES,
+    THOUSANDS_SEP,
     WIDGETS,
     SchemaError,
     answers_to_json,
     assign_names,
     build_form,
+    display_budget,
     field_name,
     form_layout,
     labelled_answers,
+    parse_budget,
     require_base_fields,
+    require_publishable,
     validate_schema,
 )
 
@@ -60,7 +66,30 @@ EVERY_TYPE = [
     {"name": "topics", "label": "Topics", "type": "checkboxes", "options": ["AI", "Bio", "Sea"]},
     {"name": "agree", "label": "I agree", "type": "checkbox", "required": True},
     {"name": "org", "label": "Organisation", "type": "research_org", "required": True},
+    {
+        "name": "costs",
+        "label": "Budget breakdown",
+        "type": "budget",
+        "required": True,
+        "currency": "SEK",
+        "max_award": 75000,
+        "max_lines": 3,
+        "description": "List the costs you are asking us to cover",
+    },
+    {"name": "closes", "label": "Application deadline", "type": "deadline"},
+    {"name": "call", "label": "Funder website", "type": "link", "url": "https://formas.se/x"},
 ]
+
+
+def test_widgets_have_palette_text_and_icons() -> None:
+    for widget in WIDGETS.values():
+        assert widget["label"] and widget["hint"] and widget["icon"]
+    assert [w["group"] for w in WIDGETS.values()] == sorted(
+        (w["group"] for w in WIDGETS.values()),
+        key=["Text", "Numbers", "Dates", "Choices", "Grant", "Sections"].index,
+    )
+    assert WIDGETS["url"]["palette"] is False
+    assert set(LAYOUT_TYPES) == {"heading", "paragraph", "deadline", "link"}
 
 
 def test_validate_normalises_defaults() -> None:
@@ -93,6 +122,42 @@ def test_every_widget_type_validates_and_keeps_its_options() -> None:
         "type": "heading",
         "required": False,
     }
+    assert fields[17] == {
+        "name": "costs",
+        "label": "Budget breakdown",
+        "type": "budget",
+        "required": True,
+        "currency": "SEK",
+        "max_award": 75000,
+        "max_lines": 3,
+        "description": "List the costs you are asking us to cover",
+    }
+    assert fields[19]["url"] == "https://formas.se/x"
+    # A budget always carries its currency; a link's url may wait until publishing.
+    budget, link = validate_schema(
+        [
+            {"name": "b", "label": "B", "type": "budget"},
+            {"name": "l", "label": "L", "type": "link"},
+        ]
+    )
+    assert budget["currency"] == "SEK" and "max_award" not in budget
+    assert "url" not in link
+
+
+def test_textarea_word_limit_and_description() -> None:
+    spec = {
+        "name": "plan",
+        "label": "Plan",
+        "type": "textarea",
+        "max_words": 3,
+        "description": "Up to 3 words",
+    }
+    assert validate_schema([spec])[0]["max_words"] == 3
+    form_class = build_form([spec], forms.Form)
+    assert form_class.base_fields["plan"].widget.attrs["data-max-words"] == 3  # wordcount.js
+    assert form_class(data={"plan": "one two three"}).is_valid()
+    form = form_class(data={"plan": "one two three four"})
+    assert not form.is_valid() and "at most 3 words" in form.errors["plan"][0]
 
 
 @pytest.mark.parametrize(
@@ -130,11 +195,110 @@ def test_every_widget_type_validates_and_keeps_its_options() -> None:
         # layout
         [{"name": "a", "label": "x", "type": "heading", "required": True}],
         [{"name": "a", "label": "x" * 201, "type": "heading"}],
+        [{"name": "a", "label": "x", "type": "deadline", "required": True}],
+        [
+            {"name": "a", "label": "x", "type": "deadline"},
+            {"name": "b", "label": "y", "type": "deadline"},
+        ],
+        [{"name": "a", "label": "x", "type": "link", "url": "not a url"}],
+        [{"name": "a", "label": "x", "type": "link", "url": "ftp://x.example"}],
+        [{"name": "a", "label": "x", "type": "link", "url": "https://x.example/" + "y" * 500}],
+        [{"name": "a", "label": "x", "type": "text", "url": "https://x.example"}],
+        # description, word limit, budget
+        [{"name": "a", "label": "x", "type": "text", "description": "d" * 301}],
+        [{"name": "a", "label": "x", "type": "textarea", "max_words": 0}],
+        [{"name": "a", "label": "x", "type": "textarea", "max_words": 5001}],
+        [{"name": "a", "label": "x", "type": "text", "max_words": 10}],
+        [{"name": "a", "label": "x", "type": "budget", "currency": "NOK"}],
+        [{"name": "a", "label": "x", "type": "budget", "max_award": 0}],
+        [{"name": "a", "label": "x", "type": "budget", "max_award": "75000"}],
+        [{"name": "a", "label": "x", "type": "budget", "max_lines": 31}],
     ],
 )
 def test_invalid_schemas(schema: Any) -> None:
     with pytest.raises(SchemaError):
         validate_schema(schema)
+
+
+BUDGET = [
+    {"label": "Staff costs", "amount": "42000"},
+    {"label": "Equipment", "amount": "12500.5"},
+]
+
+
+def test_parse_budget_reads_lines_and_lists() -> None:
+    text = "Staff costs | 42 000\n\nEquipment|12500,50\n"
+    assert parse_budget(text) == BUDGET
+    assert parse_budget(BUDGET) == BUDGET
+    assert parse_budget("Fee | 0") == [{"label": "Fee", "amount": "0"}]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "Staff costs 42000",
+        "| 42000",
+        "Staff | abc",
+        "Staff | -1",
+        "Staff | 1.234",
+        "Staff | 1e15",
+        f"{'x' * 201} | 1",
+        [{"label": "Staff"}],
+        [1],
+        42,
+    ],
+)
+def test_parse_budget_rejects(value: Any) -> None:
+    with pytest.raises(forms.ValidationError):
+        parse_budget(value)
+
+
+def test_budget_field_round_trip_and_limits() -> None:
+    form_class = build_form(EVERY_TYPE[-3:], forms.Form)
+    assert list(form_class.base_fields) == ["costs"]
+    field = form_class.base_fields["costs"]
+    assert field.widget.attrs["data-currency"] == "SEK"
+    assert field.widget.attrs["data-max-award"] == "75000"
+    form = form_class(data={"costs": "Staff costs | 42000\nEquipment | 12500.50"})
+    assert form.is_valid(), form.errors
+    answers = answers_to_json(form.cleaned_data)
+    assert answers == {"costs": BUDGET}
+    # Stored answers validate again, as the org does on receipt, and render back as lines.
+    again = form_class(data=answers)
+    assert again.is_valid(), again.errors
+    assert "Staff costs | 42000\nEquipment | 12500.5" in str(form_class(initial=answers)["costs"])
+    over = form_class(data={"costs": "Staff | 70000\nTravel | 5001"})
+    assert not over.is_valid() and f"75{THOUSANDS_SEP}000 SEK" in over.errors["costs"][0]
+    long = form_class(data={"costs": "A | 1\nB | 1\nC | 1\nD | 1"})
+    assert not long.is_valid() and "at most 3 lines" in long.errors["costs"][0]
+    assert not form_class(data={"costs": ""}).is_valid()
+    optional = build_form([{**EVERY_TYPE[-3], "required": False}], forms.Form)(data={"costs": ""})
+    assert optional.is_valid() and optional.cleaned_data["costs"] == []
+
+
+def test_display_budget() -> None:
+    assert display_budget(BUDGET, "SEK").replace(THOUSANDS_SEP, " ") == (
+        "Staff costs: 42 000 SEK; Equipment: 12 500.50 SEK; Total: 54 500.50 SEK"
+    )
+    assert display_budget([], "SEK") == "" and display_budget(None, "SEK") == ""
+    assert display_budget("garbage", "SEK") == "garbage"
+    shown = dict(labelled_answers(EVERY_TYPE, {"costs": BUDGET}))
+    assert shown["Budget breakdown"].startswith(f"Staff costs: 42{THOUSANDS_SEP}000 SEK")
+    assert "Application deadline" not in shown and "Funder website" not in shown
+
+
+def test_require_publishable_needs_link_urls() -> None:
+    require_publishable(validate_schema(EVERY_TYPE))
+    require_publishable(validate_schema([*BASE_FIELDS, *DEFAULT_FIELDS[:2]]))
+    with pytest.raises(SchemaError, match="Funder website"):
+        require_publishable(validate_schema([*BASE_FIELDS, *DEFAULT_FIELDS]))
+
+
+def test_default_fields_validate_and_get_their_names_from_labels() -> None:
+    named = assign_names([{k: v for k, v in f.items() if k != "name"} for f in DEFAULT_FIELDS])
+    assert isinstance(named, list)
+    assert [f["name"] for f in named] == [f["name"] for f in DEFAULT_FIELDS]
+    require_base_fields(validate_schema([*BASE_FIELDS, *DEFAULT_FIELDS]))
 
 
 def test_build_form_validates_required_and_types() -> None:
@@ -171,11 +335,13 @@ def test_build_form_with_every_type() -> None:
         "topics": ["AI", "Sea"],
         "agree": "on",
         "org": "kth",
+        "costs": "Staff | 100",
     }
     form = form_class(data=data)
     assert form.is_valid(), form.errors
     answers = answers_to_json(form.cleaned_data)
     assert answers["site"] == "https://example.org"
+    assert answers["costs"] == [{"label": "Staff", "amount": "100"}]
     assert answers["budget"] == "12.50" and answers["years"] == 3
     assert answers["at"] == "09:30:00" and answers["kickoff"].startswith("2027-01-02T09:30")
     assert answers["topics"] == ["AI", "Sea"] and answers["agree"] is True
@@ -201,6 +367,8 @@ def test_build_form_with_every_type() -> None:
         ("full_name", "x" * 101),
         ("at", "25:00"),
         ("org", "nowhere"),
+        ("costs", "Staff | 80000"),
+        ("costs", "no amount"),
     ],
 )
 def test_build_form_rejects_bad_values(field: str, value: Any) -> None:
@@ -212,6 +380,7 @@ def test_build_form_rejects_bad_values(field: str, value: Any) -> None:
         "size": "Small",
         "agree": "on",
         "org": "kth",
+        "costs": "Staff | 100",
         field: value,
     }
     form = form_class(data=data)
@@ -265,6 +434,8 @@ def test_form_layout_interleaves_layout_entries_and_fields() -> None:
     assert [r["spec"]["name"] for r in rows] == [s["name"] for s in EVERY_TYPE]
     assert rows[0]["field"] is None and rows[1]["field"] is None
     assert rows[2]["field"] is not None and rows[2]["field"].name == "full_name"
+    assert rows[-1]["field"] is None and rows[-2]["field"] is None  # link, deadline
+    assert rows[-3]["field"] is not None and rows[-3]["field"].name == "costs"
 
 
 def test_require_base_fields() -> None:
@@ -327,3 +498,17 @@ def test_assign_names_ignores_user_names_and_keeps_base_fields() -> None:
     assert schema[0]["name"] == "DROP TABLE"  # the input is not modified
     validate_schema(named)
     assert assign_names("nope") == "nope" and assign_names([1]) == [1]
+
+
+def test_required_yes_no_accepts_no_but_requires_an_answer() -> None:
+    form_type = build_form(
+        [{"name": "human", "label": "Human participants?", "type": "checkbox", "required": True}],
+        forms.Form,
+    )
+    for answer, expected in [("False", False), (False, False), ("True", True), ("on", True)]:
+        form = form_type({"human": answer})
+        assert form.is_valid(), form.errors
+        assert form.cleaned_data["human"] is expected
+    assert not form_type({}).is_valid()
+    assert not form_type({"human": "maybe"}).is_valid()
+    assert list(form_type(initial={"human": False})["human"])[1].data["selected"]

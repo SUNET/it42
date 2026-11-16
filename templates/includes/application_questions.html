@@ -1,0 +1,28 @@
+{% load it42 %}
+{% for row in rows %}
+  {% if row.kind == "heading" %}
+    <h2 class="it-preview-section">{{ row.spec.label }}</h2>
+  {% elif row.kind == "paragraph" %}
+    <p class="it-preview-text">{{ row.spec.label|linebreaksbr }}</p>
+  {% else %}
+    <section class="it-preview-q" id="question-{{ row.number }}" aria-labelledby="q-{{ row.number }}" data-question data-required="{{ row.spec.required|yesno:'true,false' }}" data-number="{{ row.number }}">
+      <div class="it-preview-q-head">
+        <h2 id="q-{{ row.number }}">{{ row.number }}. {{ row.spec.label }}</h2>
+        <span class="it-preview-pill{% if row.spec.required %} is-required{% endif %}" data-question-state>{% if row.spec.required %}Required{% else %}Optional{% endif %}</span>
+      </div>
+      {% if row.spec.description %}<p class="it-preview-q-desc">{{ row.spec.description }}</p>{% endif %}
+      {% if row.spec.help_text %}<div class="it-form-help">{% icon "info" %}<span>{{ row.spec.help_text }}</span></div>{% endif %}
+      {% if row.spec.type == "radio" or row.spec.type == "checkboxes" or row.spec.type == "checkbox" %}
+        <fieldset class="it-question-choices"><legend class="visually-hidden">{{ row.spec.label }}</legend>
+          {% for choice in row.field %}<div class="form-check">{{ choice.tag }}<label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label></div>{% endfor %}
+        </fieldset>
+      {% else %}
+        <label class="visually-hidden" for="{{ row.field.id_for_label }}">{{ row.spec.label }}</label>
+        {{ row.field }}
+        {% if row.spec.type == "budget" %}<div class="form-text" data-budget-note>One cost per line: <code>What it is for | amount</code>, in {{ row.spec.currency }}.</div>{% endif %}
+        {% if row.spec.max_words %}<div class="it-wordcount" data-wordcount="{{ row.field.id_for_label }}">Up to {{ row.spec.max_words }} words</div>{% endif %}
+      {% endif %}
+      {% for error in row.field.errors %}<div class="invalid-feedback d-block" role="alert">{{ error }}</div>{% endfor %}
+    </section>
+  {% endif %}
+{% endfor %}

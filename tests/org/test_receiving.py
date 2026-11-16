@@ -156,7 +156,7 @@ def test_list_and_boolean_answers_are_accepted(rich_grant: Grant, admin_client: 
         {"topics": "AI"},
         {"years": 9},
         {"years": "three"},
-        {"agree": False},
+        {"agree": None},
         {"about": "not an input"},
     ],
 )
@@ -164,3 +164,8 @@ def test_answers_outside_the_schema_are_rejected(rich_grant: Grant, bad: dict[st
     with pytest.raises(RejectEvent):
         process(submitted(rich_grant.public_id, answers={**RICH_ANSWERS, **bad}), "core-to-o1")
     assert not Application.objects.exists()
+
+
+def test_required_yes_no_accepts_a_negative_answer(rich_grant: Grant) -> None:
+    process(submitted(rich_grant.public_id, answers={**RICH_ANSWERS, "agree": False}), "core-to-o1")
+    assert Application.objects.get().answers["agree"] is False

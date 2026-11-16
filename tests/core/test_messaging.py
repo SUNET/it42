@@ -53,9 +53,18 @@ def test_payload_ids_must_match_envelope() -> None:
 
 
 def test_core_queues_and_sender() -> None:
-    assert inbound_queues() == ["o1-to-core", "o2-to-core"]
+    assert inbound_queues() == [
+        "o1-to-core",
+        "o2-to-core",
+        "o3-to-core",
+        "o4-to-core",
+        "o5-to-core",
+    ]
     assert sender_of("o1-to-core") == "o1"
     assert sender_of("o2-to-core") == "o2"
+    assert sender_of("o3-to-core") == "o3"
+    assert sender_of("o4-to-core") == "o4"
+    assert sender_of("o5-to-core") == "o5"
     with pytest.raises(ValueError):
         sender_of("core-to-o1")
 

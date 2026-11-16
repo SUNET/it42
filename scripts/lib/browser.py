@@ -51,8 +51,18 @@ def _getaddrinfo(
 
 setattr(socket, "getaddrinfo", _getaddrinfo)  # noqa: B010 (monkeypatch)
 
-# idp2 hard-codes hunter2 unless the stack sets IDP_PASSWORD (scripts/set-idp-password.sh).
-IDP_PASSWORD = _setting("IDP_PASSWORD", "hunter2")
+
+def _idp_password(username: str) -> str:
+    """Use an explicit test password, else the local import's generated credentials."""
+    if password := _setting("IDP_PASSWORD", ""):
+        return password
+    credentials = Path(__file__).resolve().parents[2] / "secrets/idp-import-passwords.txt"
+    if credentials.exists():
+        prefix = f"{username}: generated password (shown once): "
+        for line in credentials.read_text().splitlines():
+            if line.startswith(prefix):
+                return line.removeprefix(prefix)
+    raise ValueError(f"No test password for {username}; import users or set IDP_PASSWORD")
 
 
 @dataclass
@@ -159,9 +169,11 @@ class Browser:
         page = self.get(f"https://{site}/saml2/login/?next={urllib.parse.quote(next_path)}")
         if "/saml2/acs/" not in page.body:
             assert f"idp.{DOMAIN}" in page.url, f"expected the IdP login form, got {page.url}"
-            page = self.submit(page, f"idp.{DOMAIN}", user=username, password=IDP_PASSWORD)
+            page = self.submit(
+                page, f"idp.{DOMAIN}", username=username, password=_idp_password(username)
+            )
         acs = page.form("/saml2/acs/")
-        return self.request(acs["action"], acs["fields"], referer=f"https://idp.{DOMAIN}/sso")
+        return self.request(acs["action"], acs["fields"], referer=f"https://idp.{DOMAIN}/idp/sso/")
 
     def logout(self, site: str) -> tuple[Page, list[str]]:
         """Use the site's Log out button and follow the SAML single logout round trip.

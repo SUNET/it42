@@ -193,7 +193,7 @@ SAML_SESSION_COOKIE_SAMESITE = "None"
 SAML_DJANGO_USER_MAIN_ATTRIBUTE = "sso_subject"
 SAML_CREATE_UNKNOWN_USER = True
 SAML_DEFAULT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-# idp2's single logout service accepts only HTTP-POST.
+# Prefer POST if the configured IdP supports SAML logout.
 SAML_LOGOUT_REQUEST_PREFERRED_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
 SAML_CSP_HANDLER = ""
 SAML_IGNORE_LOGOUT_ERRORS = True

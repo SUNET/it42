@@ -72,6 +72,12 @@ services:
       o2-web: {condition: service_healthy}
       o1-review-web: {condition: service_healthy}
       o2-review-web: {condition: service_healthy}
+      o3-web: {condition: service_healthy}
+      o4-web: {condition: service_healthy}
+      o3-review-web: {condition: service_healthy}
+      o4-review-web: {condition: service_healthy}
+      o5-web: {condition: service_healthy}
+      o5-review-web: {condition: service_healthy}
       ro-web: {condition: service_healthy}
       idp: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
@@ -82,29 +88,30 @@ services:
       retries: 5
 
   idp:
-    # Built locally from kushaldas/saml@a2142bf (RSA-SHA256 signing).
-    image: ${IDP_IMAGE:-kushaldas/idp2:latest}
+    image: ${IDP_IMAGE:-docker.io/kushaldas/django-idp:0.2.0}
     restart: unless-stopped
-    entrypoint: ["/bin/bash", "/idp/entrypoint.sh"]
+    env_file: [env/idp.env]
     environment:
-      IDP_BASE_URL: https://idp.${IT42_DOMAIN:-it42.vr}
-      # Empty: every user keeps idp2's hunter2. The shared server sets it in .env with
-      # scripts/set-idp-password.sh (base64 of a bcrypt hash; the plaintext stays out).
-      IDP_PASSWORD_HASH: ${IDP_PASSWORD_HASH:-}
+      SAML_IDP_BASE_URL: https://idp.${IT42_DOMAIN:-it42.vr}
+      DJANGO_ALLOWED_HOSTS: idp.${IT42_DOMAIN:-it42.vr},localhost
+      DJANGO_CSRF_TRUSTED: https://idp.${IT42_DOMAIN:-it42.vr}
+      SAML_IDP_DATA_DIR: /data
+      SAML_IDP_KEY: /signing/idp.key
+      SAML_IDP_CERT: /signing/idp.pem
+      SAML_IDP_METADATA_DIR: /sp-metadata
     volumes:
-      - ./idp/entrypoint.sh:/idp/entrypoint.sh:ro
-      - ./idp/users.json:/data/users.json:ro
-      - ./secrets/saml/idp/idp.key:/data/idp.key:ro
-      - ./secrets/saml/idp/idp.pem:/data/idp.pem:ro
+      - idp_data:/data
+      - ./idp/users.json:/import/users.json:ro
+      - ./secrets/saml/idp:/signing:ro
       - ./secrets/saml/sp-metadata:/sp-metadata:ro
-      # Server-only users (JSON lists like idp/users.json); empty on a laptop.
-      - ./secrets/idp-users:/data/extra-users:ro
+      - ./secrets/idp-users:/import/extra-users:ro
     networks: [edge]
     healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/sps-registered"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/idp/metadata', timeout=3)"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 12
+      start_period: 30s
 
   rabbitmq:
     image: rabbitmq:4.3.6-management
@@ -120,6 +127,9 @@ services:
       mq_o1: {ipv4_address: 10.242.2.10}
       mq_o2: {ipv4_address: 10.242.3.10}
       mq_ro: {ipv4_address: 10.242.4.10}
+      mq_o3: {ipv4_address: 10.242.5.10}
+      mq_o4: {ipv4_address: 10.242.6.10}
+      mq_o5: {ipv4_address: 10.242.7.10}
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity"]
       interval: 10s
@@ -144,6 +154,24 @@ services:
     env_file: env/o2.env
     volumes: [o2_db:/var/lib/postgresql]
     networks: [o2_net]
+
+  o3-db:
+    <<: *db
+    env_file: env/o3.env
+    volumes: [o3_db:/var/lib/postgresql]
+    networks: [o3_net]
+
+  o4-db:
+    <<: *db
+    env_file: env/o4.env
+    volumes: [o4_db:/var/lib/postgresql]
+    networks: [o4_net]
+
+  o5-db:
+    <<: *db
+    env_file: env/o5.env
+    volumes: [o5_db:/var/lib/postgresql]
+    networks: [o5_net]
 
   ro-db:
     <<: *db
@@ -262,6 +290,117 @@ services:
       - *directory
     networks: [edge, o2_net]
 
+  o3-web:
+    <<: *web
+    env_file: env/o3.env
+    depends_on: {o3-db: {condition: service_healthy}}
+    volumes:
+      - o3_media:/app/media
+      - ./secrets/saml/o3:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o3_net]
+
+  o3-worker:
+    <<: *worker
+    env_file: [env/o3.env, env/o3-mq.env]
+    depends_on:
+      o3-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [o3_media:/app/media, *directory]
+    networks: [o3_net, mq_o3]
+
+  # The org's reviewer site: same image, database and media; its own hostname and
+  # SAML service provider. env/o3-review.env overrides the staff site's values.
+  o3-review-web:
+    <<: *web
+    env_file: [env/o3.env, env/o3-review.env]
+    depends_on:
+      o3-db: {condition: service_healthy}
+      o3-web: {condition: service_healthy}  # runs the migrations first
+    volumes:
+      - o3_media:/app/media
+      - ./secrets/saml/o3-review:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o3_net]
+
+  o4-web:
+    <<: *web
+    env_file: env/o4.env
+    depends_on: {o4-db: {condition: service_healthy}}
+    volumes:
+      - o4_media:/app/media
+      - ./secrets/saml/o4:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o4_net]
+
+  o4-worker:
+    <<: *worker
+    env_file: [env/o4.env, env/o4-mq.env]
+    depends_on:
+      o4-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [o4_media:/app/media, *directory]
+    networks: [o4_net, mq_o4]
+
+  # The org's reviewer site: same image, database and media; its own hostname and
+  # SAML service provider. env/o4-review.env overrides the staff site's values.
+  o4-review-web:
+    <<: *web
+    env_file: [env/o4.env, env/o4-review.env]
+    depends_on:
+      o4-db: {condition: service_healthy}
+      o4-web: {condition: service_healthy}  # runs the migrations first
+    volumes:
+      - o4_media:/app/media
+      - ./secrets/saml/o4-review:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o4_net]
+
+  o5-web:
+    <<: *web
+    env_file: env/o5.env
+    depends_on: {o5-db: {condition: service_healthy}}
+    volumes:
+      - o5_media:/app/media
+      - ./secrets/saml/o5:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o5_net]
+
+  o5-worker:
+    <<: *worker
+    env_file: [env/o5.env, env/o5-mq.env]
+    depends_on:
+      o5-web: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    volumes: [o5_media:/app/media, *directory]
+    networks: [o5_net, mq_o5]
+
+  # The org's reviewer site: same image, database and media; its own hostname and
+  # SAML service provider. env/o5-review.env overrides the staff site's values.
+  o5-review-web:
+    <<: *web
+    env_file: [env/o5.env, env/o5-review.env]
+    depends_on:
+      o5-db: {condition: service_healthy}
+      o5-web: {condition: service_healthy}  # runs the migrations first
+    volumes:
+      - o5_media:/app/media
+      - ./secrets/saml/o5-review:/run/secrets/saml:ro
+      - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
+      - ./templates:/app/templates:ro
+      - *directory
+    networks: [edge, o5_net]
+
   # The research organisation site: one site and database for every organisation in
   # the directory. Its worker talks only to the orgs (o1-to-ro, ro-to-o1, ...).
   ro-web:
@@ -290,6 +429,9 @@ networks:
   core_net: {internal: true}
   o1_net: {internal: true}
   o2_net: {internal: true}
+  o3_net: {internal: true}
+  o4_net: {internal: true}
+  o5_net: {internal: true}
   ro_net: {internal: true}
   # Fixed subnets so RabbitMQ can bind AMQP to its mq_* addresses only
   # (rabbitmq/rabbitmq.conf); on edge it serves just the management UI.
@@ -306,7 +448,19 @@ networks:
     internal: true
     ipam: {config: [{subnet: 10.242.4.0/24}]}
 
+  mq_o3:
+    internal: true
+    ipam: {config: [{subnet: 10.242.5.0/24}]}
+  mq_o4:
+    internal: true
+    ipam: {config: [{subnet: 10.242.6.0/24}]}
+
+  mq_o5:
+    internal: true
+    ipam: {config: [{subnet: 10.242.7.0/24}]}
+
 volumes:
+  idp_data: {}
   caddy_data: {}
   caddy_config: {}
   rabbitmq_data: {}
@@ -318,3 +472,9 @@ volumes:
   o1_media: {}
   o2_media: {}
   ro_media: {}
+  o3_db: {}
+  o4_db: {}
+  o3_media: {}
+  o4_media: {}
+  o5_db: {}
+  o5_media: {}

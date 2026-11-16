@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from typing import Any
 
 import pytest
@@ -10,6 +10,7 @@ from django.utils import timezone
 from it42.common.events import Envelope, RejectEvent
 from it42.common.inbox import process
 from it42.core.catalog.models import PublicGrant
+from it42.core.catalog.views import is_open
 
 SCHEMA = [{"name": "budget", "label": "Budget", "type": "number", "required": True}]
 
@@ -179,3 +180,68 @@ def test_text_pages_render_markdown(client: Client) -> None:
     assert 'href="#cookies-we-use"' in body  # "On this page"
     assert client.get("/pages/nope/").status_code == 404
     assert client.get("/pages/privacy/").status_code == 200
+
+
+@pytest.mark.django_db
+def test_grant_published_keeps_the_closing_time_and_the_new_blocks() -> None:
+    schema = [
+        {"name": "closes", "label": "Application deadline", "type": "deadline"},
+        {"name": "call", "label": "Funder website", "type": "link", "url": "https://x.example"},
+        {"name": "costs", "label": "Budget", "type": "budget", "max_award": 75000},
+        {
+            "name": "plan",
+            "label": "Plan",
+            "type": "textarea",
+            "max_words": 1500,
+            "description": "d",
+        },
+    ]
+    process(published(uuid.uuid4(), deadline_time="17:00", form_schema=schema), "o1-to-core")
+    grant = PublicGrant.objects.get()
+    assert grant.deadline_time == time(17, 0)
+    assert grant.form_schema[2]["currency"] == "SEK" and grant.form_schema[3]["max_words"] == 1500
+    # Orgs that don't send a time (older images) still publish.
+    process(published(uuid.uuid4(), title="no time"), "o1-to-core")
+    assert PublicGrant.objects.get(title="no time").deadline_time is None
+    with pytest.raises(RejectEvent):
+        process(published(uuid.uuid4(), deadline_time="five"), "o1-to-core")
+
+
+@pytest.mark.django_db
+def test_calls_close_at_the_given_time_of_the_deadline_day(client: Client) -> None:
+    today = timezone.localdate()
+    now = timezone.localtime()
+    later = make("o1", "Later today", today)
+    later.deadline_time = (now + timedelta(hours=1)).time()
+    later.save()
+    earlier = make("o1", "Earlier today", today)
+    earlier.deadline_time = (now - timedelta(hours=1)).time()
+    earlier.save()
+    all_day = make("o1", "All day", today)
+    assert is_open(later) and is_open(all_day) and not is_open(earlier)
+    assert all_day.closes_at().time() == time.max
+    assert timezone.localtime(later.closes_at()).time() == later.deadline_time
+    # The list stays by day; the detail page says a call that closed earlier today is closed.
+    body = client.get("/calls/").content.decode()
+    assert "Later today" in body and "Earlier today" in body
+    body = client.get(f"/grants/o1/{earlier.grant_public_id}/").content.decode()
+    assert "Log in to apply" not in body and "closed for applications" in body
+    body = client.get(f"/grants/o1/{later.grant_public_id}/").content.decode()
+    assert "Log in to apply" in body and later.deadline_time.strftime("%H:%M") in body
+
+
+@pytest.mark.django_db
+def test_grant_detail_lists_only_the_inputs(client: Client) -> None:
+    grant = make("o1", "g1", timezone.localdate() + timedelta(days=5))
+    grant.form_schema = [
+        {"name": "intro", "label": "Read this first", "type": "paragraph"},
+        {"name": "closes", "label": "Application deadline", "type": "deadline"},
+        {"name": "call", "label": "Funder website", "type": "link", "url": "https://x.example"},
+        {"name": "plan", "label": "Project plan", "type": "textarea", "required": True},
+    ]
+    grant.save()
+    body = client.get(f"/grants/o1/{grant.grant_public_id}/").content.decode()
+    asks = body.split('id="asks-for"', 1)[1].split("</section>", 1)[0]
+    assert "Project plan" in asks
+    for hidden in ("Read this first", "Application deadline", "Funder website"):
+        assert hidden not in asks

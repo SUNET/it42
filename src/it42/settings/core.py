@@ -23,8 +23,8 @@ ROOT_URLCONF = "it42.core.urls"
 
 # Every org the core exchanges events with: slug -> display name and colour. The core
 # shows these names, never the org_name an event claims.
-KNOWN_ORGS = {"o1": "Org 1", "o2": "Org 2"}
-ORG_COLORS = {"o1": "#198754", "o2": "#6f42c1"}
+KNOWN_ORGS = {"o1": "Org 1", "o2": "Org 2", "o3": "Formas", "o4": "Forte", "o5": "Vinnova"}
+ORG_COLORS = {"o1": "#198754", "o2": "#6f42c1", "o3": "#198754", "o4": "#6f42c1", "o5": "#6f42c1"}
 
 SAML_CONFIG = build_saml_config(
     site_url=SITE_URL,
