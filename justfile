@@ -46,6 +46,10 @@ setup:
 up:
     docker compose up -d --build
 
+# Local UI development: live templates and static assets (optionally: just dev o1-web)
+dev *services:
+    docker compose -f compose.yaml -f compose.dev.yaml up -d --build "$@"
+
 # Rebuild only the Django containers after changing src/, templates/ or static/
 rebuild:
     docker compose up -d --build {{ web_services }}

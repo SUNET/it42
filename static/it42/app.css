@@ -77,8 +77,16 @@
 .it-diamond { width: 8px; height: 8px; border-radius: 1.5px; background: var(--it-violet); transform: rotate(45deg); }
 
 /* Board */
-.it-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; flex: 1 1 auto; }
-@media (max-width: 1199.98px) { .it-board { grid-template-columns: 1fr; } }
+/* Include the column padding so the cards themselves remain at least 10vw wide.
+   The pixel floor keeps cards readable on smaller screens; overflow stays in the board. */
+.it-board {
+  --it-board-columns: 3;
+  display: grid; grid-template-columns: repeat(var(--it-board-columns), minmax(max(240px, calc(10vw + 24px)), 1fr));
+  gap: 16px; align-items: stretch; flex: 1 1 auto; min-width: 0; max-width: 100%;
+  overflow-x: auto; padding-bottom: 12px;
+}
+.it-board:focus-visible { outline: 2px solid var(--it-midnight); outline-offset: 2px; }
+.it-board .it-app-card { min-width: 10vw; overflow-wrap: anywhere; }
 .it-column { display: flex; flex-direction: column; gap: 10px; min-height: 240px; padding: 12px; border-radius: var(--it-radius-20); background: var(--it-role-3); }
 .it-column-done { background: var(--it-black-4); }
 .it-column-head { display: flex; align-items: center; gap: 8px; padding: 4px; }

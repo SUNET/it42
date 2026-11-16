@@ -18,7 +18,7 @@
   </div>
 </div>
 
-<div class="it-board">
+<div class="it-board" tabindex="0" role="region" aria-label="Application board">
   {% for column in columns %}
     <section class="it-column{% if column.key == 'decision' %} it-column-done{% endif %}" aria-labelledby="col-{{ column.key }}">
       <div class="it-column-head">
