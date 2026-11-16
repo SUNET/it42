@@ -16,7 +16,7 @@ ATTRS = {
 
 
 def session_info(**overrides: Any) -> dict[str, Any]:
-    return {"ava": {**ATTRS, **overrides}, "issuer": "https://idp.it42.vr/metadata"}
+    return {"ava": {**ATTRS, **overrides}, "issuer": "https://idp.it42.vr/idp/metadata"}
 
 
 def authenticate(info: dict[str, Any], assertion_id: str = "a1") -> Any:

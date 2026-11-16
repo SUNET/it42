@@ -1,65 +1,221 @@
 {% extends "org/base.html" %}
-{% load static %}
+{% load static it42 %}
+{% comment %}
+Grants / Form builder: the left panel has Grant settings first, then the Components palette (with saved
+templates); the right column holds the Saved templates bar and the
+form's field cards. Everything is one <form> (the grant's): the builder's buttons submit it
+with formaction="...?action=publish|template|preview", so they also work without
+JavaScript, when the page falls back to the JSON editor at the bottom. The JavaScript
+(static/it42/formbuilder.js) only ever edits the form_schema textarea.
+{% endcomment %}
 {% block title %}{% if grant %}Edit {{ grant.title }}{% else %}New grant{% endif %} · {{ SITE_NAME }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'it42/formbuilder.css' %}">{% endblock %}
-{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">{% if grant %}{{ grant.title }}{% else %}New grant{% endif %}</li>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'it42/formbuilder.css' %}"><link rel="stylesheet" href="{% static 'it42/application-form.css' %}">{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_drafts' %}">Drafts</a></li><li aria-current="page">{% if grant %}{{ grant.title }}{% else %}New grant{% endif %}</li>{% endblock %}
 {% block content %}
-<div class="it-toolbar">
-  <div>
-    <h1>{% if grant %}Edit draft{% else %}New grant{% endif %}</h1>
-    <p>Describe the call and build its application form. Nothing is public until you publish the draft.</p>
-  </div>
-</div>
-  <form method="post" class="it-card" novalidate id="grant-form">{% csrf_token %}
-    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
-    {% for field in form %}
-      {% if field.name != "form_schema" %}
-        <div class="mb-3">
-          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
-          {{ field }}
-          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-        </div>
-      {% endif %}
-    {% endfor %}
+<form method="post" action="{{ action_url }}" class="fb" novalidate id="grant-form" data-config="builder-config" data-target="{{ form.form_schema.id_for_label }}">{% csrf_token %}
+  {{ form.template }}
+  {% if form.non_field_errors %}<div class="alert alert-danger fb-span">{{ form.non_field_errors|join:" " }}</div>{% endif %}
 
-    <fieldset class="mb-3">
-      <legend class="form-label fs-6">Application form</legend>
-      <p class="form-text mt-0">Drag widgets from the palette onto the form, or use the Add buttons. Click a field to edit it. The applicant's name and email address and the administrating organisation are always part of the form; you may make the organisation optional (an empty answer skips the organisation's sign-off). Applicants attach PDFs separately.</p>
-      {% for error in form.form_schema.errors %}<div class="alert alert-danger py-2" data-schema-error>{{ error }}</div>{% endfor %}
+  <aside class="fb-side">
+    <a class="fb-back" href="{% url 'grant_drafts' %}">{% icon "caret-left" %}All drafts</a>
+    <details class="fb-mobile-panels" open><summary>Grant settings &amp; components</summary>
+    <div data-tabs class="fb-tabs">
+      <nav class="it-segments fb-segments" role="tablist" aria-label="Builder panels">
+        <a href="#fb-settings" role="tab" id="tab-settings"{% if form.errors %} data-open{% endif %}>Grant settings</a>
+        <a href="#fb-components" role="tab" id="tab-components">Components</a>
+      </nav>
 
-      <div id="form-builder" class="fb" data-config="builder-config" data-target="{{ form.form_schema.id_for_label }}" hidden>
-        <div class="fb-palette" aria-labelledby="fb-palette-title">
-          <h2 class="h6 mb-2" id="fb-palette-title">Widgets</h2>
-          <div data-palette></div>
+      <section id="fb-settings" class="fb-panel" role="tabpanel" aria-labelledby="tab-settings">
+        {% for field in form %}
+          {% if field.name != "form_schema" and field.name != "template" %}
+            <div class="fb-setting">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+              {{ field }}
+              {% if field.name == "category" %}<div class="form-text"><a href="{% url 'category_list' %}">Manage categories</a></div>
+              {% elif field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="fb-setting">
+          <span class="form-label">Status</span>
+          <div class="it-segments fb-status" aria-label="Status">
+            <span{% if not grant or grant.status == "draft" %} aria-current="true"{% endif %}><span class="it-status-dot" aria-hidden="true"></span>Unpublished</span>
+            <span{% if grant and grant.status != "draft" %} aria-current="true"{% endif %}><span class="it-status-dot" aria-hidden="true"></span>Published</span>
+          </div>
+          <div class="form-text">Only you and your co-granters can see this grant until you publish it.</div>
         </div>
-        <div class="fb-canvas-wrap">
-          <h2 class="h6 mb-2">Form <span class="small fw-normal text-body-secondary" data-count></span></h2>
-          <ol class="fb-canvas list-unstyled" data-canvas aria-label="Form fields"></ol>
-          <p class="visually-hidden" aria-live="polite" data-announce></p>
+        <h3 class="fb-summary-title">Form summary</h3>
+        <dl class="fb-summary">
+          <div><dt>Fields</dt><dd data-sum="fields">{{ summary.fields }}</dd></div>
+          <div><dt>Required</dt><dd data-sum="required">{{ summary.required }}</dd></div>
+          <div><dt>Added by default</dt><dd data-sum="defaults">{{ summary.defaults }}</dd></div>
+          <div><dt>Last saved</dt><dd>{% if grant %}{{ grant.updated_at|timesince }} ago{% else %}Not yet{% endif %}</dd></div>
+        </dl>
+      </section>
+
+      <section id="fb-components" class="fb-panel" role="tabpanel" aria-labelledby="tab-components">
+        <div class="fb-search">
+          {% icon "magnifying-glass" %}
+          <label class="visually-hidden" for="fb-search">Search components</label>
+          <input id="fb-search" type="search" placeholder="Search components" autocomplete="off" data-palette-search>
+          <kbd aria-hidden="true">/</kbd>
         </div>
-        <div class="fb-props" aria-labelledby="fb-props-title">
-          <h2 class="h6 mb-2" id="fb-props-title">Field settings</h2>
-          <div data-props><p class="small text-body-secondary mb-0">Select a field on the form to edit it.</p></div>
+        <p class="fb-panel-hint">Click a component or a saved template to add it to the end of the form. Saved templates add every field.</p>
+        <div class="fb-palette" data-palette>
+          <div class="fb-palette-group" data-group>
+            <h3>Saved templates <small>Adds every field</small></h3>
+            {% for t in templates %}
+              <button type="button" class="fb-palette-item fb-palette-template" data-template="{{ t.pk }}" data-search="{{ t.name }} {{ t.description }}">
+                <span class="fb-palette-icon" aria-hidden="true">{% icon "floppy-disk" %}</span>
+                <span class="fb-palette-text"><strong>{{ t.name }}</strong><small>{{ t.field_count }} field{{ t.field_count|pluralize }}{% if t.description %} · {{ t.description }}{% endif %}</small></span>
+              </button>
+            {% empty %}
+              <p class="fb-palette-none">No saved templates yet.</p>
+            {% endfor %}
+          </div>
+          {% for group in palette_groups %}
+            <div class="fb-palette-group" data-group>
+              <h3>{{ group.name }}</h3>
+              {% for type, w in group.items %}
+                <button type="button" class="fb-palette-item" data-type="{{ type }}" data-search="{{ w.label }} {{ w.hint }}">
+                  <span class="fb-palette-icon" aria-hidden="true">{% icon w.icon %}</span>
+                  <span class="fb-palette-text"><strong>{{ w.label }}</strong><small>{{ w.hint }}</small></span>
+                </button>
+              {% endfor %}
+            </div>
+          {% endfor %}
+          <p class="fb-palette-none" hidden data-palette-empty>Nothing matches. Try another word.</p>
+        </div>
+      </section>
+    </div>
+    </details>
+    <div class="fb-side-actions">
+      <button class="btn btn-primary" type="submit" formaction="{{ action_url }}?action=publish" data-publish>Publish grant</button>
+      <button class="btn btn-light" type="submit" formaction="{{ action_url }}?action=preview" formtarget="_blank" formnovalidate data-preview>{% icon "eye" %}Preview as applicant</button>
+    </div>
+  </aside>
+
+  <div class="fb-main">
+    <section class="fb-templates" aria-labelledby="fb-templates-title">
+      <div class="fb-templates-head">
+        <div>
+          <h2 id="fb-templates-title">Saved templates</h2>
+          <p>Load a saved template, or save this form as a new one.</p>
+        </div>
+        <div class="fb-templates-actions">
+          {% if grant %}<button class="btn btn-outline-secondary" type="submit" formaction="{% url 'grant_duplicate' grant.pk %}" formnovalidate>{% icon "copy" %}Duplicate form</button>{% endif %}
+          <details class="it-popover it-popover-right">
+            <summary class="btn btn-primary">{% icon "floppy-disk" %}Save as template</summary>
+            <div class="it-popover-body">
+              <label class="form-label" for="template-name">Template name</label>
+              <input class="form-control" id="template-name" name="name" maxlength="100" placeholder="Small grant – quick apply">
+              <p class="form-text">Saves this draft too. The template then appears under Saved templates for every grant.</p>
+              <button class="btn btn-primary" type="submit" formaction="{{ action_url }}?action=template">Save template</button>
+            </div>
+          </details>
         </div>
       </div>
-
-      <details class="mt-3" id="form-schema-json"{% if form.form_schema.errors %} open{% endif %}>
-        <summary class="small text-body-secondary">Advanced: edit as JSON</summary>
-        <div class="mt-2">
-          <label class="visually-hidden" for="{{ form.form_schema.id_for_label }}">{{ form.form_schema.label }}</label>
-          {{ form.form_schema }}
-          <div class="form-text">{{ form.form_schema.help_text }} Types: text, textarea, email, url, tel, number, integer, date, time, datetime, select, radio, checkboxes, checkbox, heading, paragraph (research_org only for administrating_organisation).</div>
-          <div class="invalid-feedback" data-json-error></div>
+      <details class="fb-pick" data-pick>
+        <summary>
+          <span class="fb-palette-icon" aria-hidden="true">{% icon "floppy-disk" %}</span>
+          <span class="fb-palette-text"><strong data-pick-name>{% if grant and grant.template %}{{ grant.template.name }}{% else %}No template{% endif %}</strong><small data-pick-meta>{% if grant and grant.template %}{{ grant.template.field_count }} field{{ grant.template.field_count|pluralize }} · this form is based on it{% else %}Pick one to replace the form with it{% endif %}</small></span>
+          {% icon "caret-down" %}
+        </summary>
+        <div class="fb-pick-menu">
+          <h3>Saved templates</h3>
+          {% for t in templates %}
+            <button type="button" class="fb-pick-item" data-load="{{ t.pk }}">
+              <span class="fb-palette-icon" aria-hidden="true">{% icon "floppy-disk" %}</span>
+              <span class="fb-palette-text"><strong>{{ t.name }}</strong><small>{{ t.field_count }} field{{ t.field_count|pluralize }} · used {{ t.used }} time{{ t.used|pluralize }}</small></span>
+              <span class="fb-pick-check" aria-hidden="true">{% icon "check-circle" %}</span>
+            </button>
+          {% endfor %}
+          <button type="button" class="fb-pick-item" data-load="blank">
+            <span class="fb-palette-icon" aria-hidden="true">{% icon "plus" %}</span>
+            <span class="fb-palette-text"><strong>Blank form</strong><small>Start again with only the default fields</small></span>
+          </button>
         </div>
       </details>
-    </fieldset>
+    </section>
 
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Save draft</button>
-      <a class="btn btn-outline-secondary" href="{% url 'grant_list' %}">Cancel</a>
+    <div class="fb-head">
+      <div>
+        <h1>Application form</h1>
+        <p>Applicants fill this in. Summary, deadline and link are added to every new grant by default.</p>
+      </div>
+      <div class="fb-save">
+        <span class="fb-save-state" data-save-state>{% icon "check-circle" %}<span>{% if grant %}All changes saved{% else %}Not saved yet{% endif %}</span></span>
+        <button class="btn btn-outline-primary" type="submit">Save draft</button>
+      </div>
     </div>
-  </form>
-  {{ builder_config|json_script:"builder-config" }}
+    {% for error in form.form_schema.errors %}<div class="alert alert-danger py-2" data-schema-error>{{ error }}</div>{% endfor %}
+
+    {# Icons the cards need that are not on the palette; formbuilder.js copies them from here. #}
+    <div hidden data-icons>
+      <span data-icon="grip">{% icon "dots-six-vertical" %}</span>
+      <span data-icon="edit">{% icon "pencil-simple" %}</span>
+      <span data-icon="trash">{% icon "trash" %}</span>
+      <span data-icon="sparkle">{% icon "sparkle" %}</span>
+      <span data-icon="info">{% icon "info" %}</span>
+      <span data-icon="date">{% icon "calendar-blank" %}</span>
+      <span data-icon="time">{% icon "clock" %}</span>
+      <span data-icon="link">{% icon "link" %}</span>
+    </div>
+    <div class="fb-js" hidden data-builder>
+      <details class="fb-always">
+        <summary>{% icon "lock" %}Always included <small>The applicant's name and email, and the administrating organisation</small></summary>
+        <ol class="fb-locked" data-locked></ol>
+      </details>
+      <ol class="fb-canvas" data-canvas aria-label="Form fields"></ol>
+      <p class="visually-hidden" aria-live="polite" data-announce></p>
+      <div class="fb-add" data-add>
+        <button type="button" class="fb-add-button" data-add-toggle aria-expanded="false" aria-controls="fb-add-menu">
+          <span class="fb-add-plus" aria-hidden="true">{% icon "plus" %}</span>
+          <strong>Add a field</strong>
+          <small>Pick a component or saved template on the left. It's added to the end of the list.</small>
+        </button>
+        <div class="fb-add-menu" id="fb-add-menu" hidden data-add-menu>
+          <h3>Add to form</h3>
+          <div class="fb-add-list" data-add-list></div>
+        </div>
+      </div>
+    </div>
+
+    <details class="fb-json" id="form-schema-json"{% if form.form_schema.errors %} open{% endif %}>
+      <summary>Advanced: edit as JSON</summary>
+      <div class="mt-2">
+        <label class="visually-hidden" for="{{ form.form_schema.id_for_label }}">{{ form.form_schema.label }}</label>
+        {{ form.form_schema }}
+        <div class="form-text">{{ form.form_schema.help_text }} Types: text, textarea, email, tel, number, integer, date, time, datetime, select, radio, checkboxes, checkbox, budget, deadline, link, heading, paragraph (research_org only for administrating_organisation, url for older forms).</div>
+        <div class="invalid-feedback" data-json-error></div>
+      </div>
+    </details>
+  </div>
+
+  {# Preview as applicant (Grants / Applicant view – Preview): the posted form in an iframe, full screen. Escape, "Back to editing" and the iframe's own Escape close it. #}
+  <dialog class="fb-preview" id="fb-preview-dialog" aria-label="Preview as applicant">
+    <div class="it-preview-bar">
+      <div>
+        <p class="it-preview-bar-title">Preview — this is what applicants will see</p>
+        <p class="it-preview-bar-sub">Nothing is published yet. Answers you type here aren't saved.</p>
+      </div>
+      <div class="it-preview-bar-actions">
+        <button class="btn btn-light" type="button" data-preview-close>Back to editing</button>
+        <button class="btn btn-primary" type="button" data-preview-publish>Publish grant</button>
+      </div>
+    </div>
+    <iframe class="fb-preview-frame" title="Application form preview" data-preview-frame></iframe>
+  </dialog>
+  <dialog class="it-modal" id="fb-publish-dialog" aria-labelledby="fb-publish-title">
+    <h2 id="fb-publish-title">Publish this grant?</h2>
+    <p class="it-modal-sub">It is listed on {{ CORE_SITE_HOST }} at once and applicants can apply until the deadline. The form cannot be changed after publishing.</p>
+    <div class="it-modal-actions">
+      <button class="btn btn-light" type="button" data-dialog-close>Keep editing</button>
+      <button class="btn btn-primary" type="submit" formaction="{{ action_url }}?action=publish">Publish grant</button>
+    </div>
+  </dialog>
+</form>
+{{ builder_config|json_script:"builder-config" }}
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'it42/formbuilder.js' %}"></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'it42/tabs.js' %}"></script><script src="{% static 'it42/formbuilder.js' %}"></script>{% endblock %}

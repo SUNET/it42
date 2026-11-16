@@ -46,14 +46,40 @@ ro.{$IT42_DOMAIN:it42.vr} {
 
 idp.{$IT42_DOMAIN:it42.vr} {
 	import {$IT42_TLS:local_tls}
-	# idp2's admin APIs are unauthenticated. SPs are registered from inside the
-	# container (idp/entrypoint.sh), so nothing outside needs them.
-	@admin path /services /services/* /users /users/* /sessions /sessions/* /shortcuts /shortcuts/*
-	respond @admin "Forbidden" 403
-	reverse_proxy idp:8080
+	reverse_proxy idp:8000
 }
 
 mq.{$IT42_DOMAIN:it42.vr} {
 	import {$IT42_TLS:local_tls}
 	reverse_proxy rabbitmq:15672
+}
+
+fo3.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o3-web:8000
+}
+
+fo3-review.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o3-review-web:8000
+}
+
+fo4.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o4-web:8000
+}
+
+fo4-review.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o4-review-web:8000
+}
+
+fo5.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o5-web:8000
+}
+
+fo5-review.{$IT42_DOMAIN:it42.vr} {
+	import {$IT42_TLS:local_tls}
+	reverse_proxy o5-review-web:8000
 }

@@ -1,6 +1,6 @@
 """Grant events from orgs."""
 
-from datetime import date
+from datetime import date, time
 from typing import Any
 
 from django.conf import settings
@@ -26,6 +26,9 @@ def on_grant_published(envelope: Envelope, sender: str) -> None:
     payload = envelope.payload
     try:
         deadline = date.fromisoformat(payload["deadline"])
+        # Added later to the payload; older orgs send none and close at the end of the day.
+        raw_time = payload.get("deadline_time")
+        deadline_time = time.fromisoformat(raw_time) if raw_time else None
         form_schema = validate_schema(payload.get("form_schema", []))
     except (KeyError, TypeError, ValueError, SchemaError) as exc:
         raise RejectEvent(f"invalid grant: {exc}") from exc
@@ -38,6 +41,7 @@ def on_grant_published(envelope: Envelope, sender: str) -> None:
             "title": _text(payload, "title", 200),
             "description": _text(payload, "description", 20_000),
             "deadline": deadline,
+            "deadline_time": deadline_time,
             "form_schema": form_schema,
             "status": PublicGrant.Status.OPEN,
         },

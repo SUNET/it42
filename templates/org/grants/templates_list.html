@@ -1,0 +1,42 @@
+{% extends "org/base.html" %}
+{% load it42 %}
+{% block title %}Saved templates · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_drafts' %}">Drafts</a></li><li aria-current="page">Saved templates</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Saved templates</h1>
+    <p>Application forms you can load into a new grant. Save one from the form builder with “Save as template”. Built-in templates come with the site and cannot be changed.</p>
+  </div>
+</div>
+<div class="it-table-card">
+  <div class="table-responsive">
+    <table class="table it-table align-middle mb-0">
+      <thead><tr><th scope="col">Template</th><th scope="col">Fields</th><th scope="col">Used</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+      {% for t in templates %}
+        <tr>
+          <td><strong>{{ t.name }}</strong>{% if t.is_builtin %} <span class="it-tag-soft">Built-in</span>{% endif %}{% if t.description %}<div class="it-meta">{{ t.description }}</div>{% endif %}</td>
+          <td>{{ t.field_count }}</td>
+          <td>{{ t.used }} grant{{ t.used|pluralize }}</td>
+          <td>
+            {% if is_org_admin and not t.is_builtin %}
+            <div class="it-row-actions">
+              <form method="post" action="{% url 'template_rename' t.pk %}" class="d-flex gap-2">{% csrf_token %}
+                <label class="visually-hidden" for="rename-{{ t.pk }}">New name</label>
+                <input class="form-control form-control-sm" id="rename-{{ t.pk }}" name="name" value="{{ t.name }}" maxlength="100" required>
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Rename</button>
+              </form>
+              <form method="post" action="{% url 'template_delete' t.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="it-files-empty">No templates yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

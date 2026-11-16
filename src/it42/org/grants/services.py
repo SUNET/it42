@@ -5,7 +5,12 @@ from datetime import date
 from django.conf import settings
 from django.db import transaction
 
-from it42.common.formschema import SchemaError, require_base_fields, validate_schema
+from it42.common.formschema import (
+    SchemaError,
+    require_base_fields,
+    require_publishable,
+    validate_schema,
+)
 from it42.common.outbox import emit
 from it42.common.routing import org_to_core, org_to_ro
 from it42.common.statuses import ApplicationStatus
@@ -24,7 +29,9 @@ def publish(grant_id: int) -> Grant:
         if grant.status != Grant.Status.DRAFT:
             raise InvalidTransition("Only drafts can be published.")
         try:
-            require_base_fields(validate_schema(grant.form_schema))
+            schema = validate_schema(grant.form_schema)
+            require_base_fields(schema)
+            require_publishable(schema)
         except SchemaError as exc:
             raise InvalidTransition(f"The application form is not complete: {exc}") from exc
         grant.status = Grant.Status.PUBLISHED
@@ -38,6 +45,8 @@ def publish(grant_id: int) -> Grant:
                 "title": grant.title,
                 "description": grant.description,
                 "deadline": grant.deadline.isoformat(),
+                # Added after the first release; core treats a missing time as end of day.
+                "deadline_time": grant.deadline_time.strftime("%H:%M"),
                 "form_schema": grant.form_schema,
             },
             grant_id=grant.public_id,

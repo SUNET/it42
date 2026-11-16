@@ -12,7 +12,7 @@ if ! grep -q "ro.$IT42_DOMAIN" /etc/hosts; then
     d=$IT42_DOMAIN
     echo
     echo "Add the hostnames to /etc/hosts (needed by your browser):"
-    echo "  echo \"127.0.0.1 $d fo1.$d fo2.$d fo1-review.$d fo2-review.$d ro.$d idp.$d mq.$d\" | sudo tee -a /etc/hosts"
+    echo "  echo \"127.0.0.1 $d fo1.$d fo2.$d fo3.$d fo4.$d fo5.$d fo1-review.$d fo2-review.$d fo3-review.$d fo4-review.$d fo5-review.$d ro.$d idp.$d mq.$d\" | sudo tee -a /etc/hosts"
 fi
 echo
 echo "Next: docker compose up -d --build"

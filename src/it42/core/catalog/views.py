@@ -9,6 +9,7 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
+from it42.common.formschema import is_layout
 from it42.common.statuses import ENDED_BEFORE_REVIEW
 from it42.core.applications.models import ApplicationCopy, ApplicationDraft
 
@@ -25,10 +26,13 @@ READING_WPM = 200
 
 
 def is_open(grant: PublicGrant) -> bool:
-    return grant.status == PublicGrant.Status.OPEN and grant.deadline >= timezone.localdate()
+    """Applications are accepted until the minute the call closes (``closes_at``)."""
+    return grant.status == PublicGrant.Status.OPEN and timezone.now() < grant.closes_at()
 
 
 def open_grants() -> QuerySet[PublicGrant]:
+    """Listed as open: by day, so a call stays listed through its last day while
+    ``is_open`` already refuses applications after its closing time."""
     return PublicGrant.objects.filter(
         status=PublicGrant.Status.OPEN, deadline__gte=timezone.localdate()
     )
@@ -95,6 +99,8 @@ def grant_detail(request: HttpRequest, org_slug: str, grant_id: str) -> HttpResp
         {
             "grant": grant,
             "is_open": is_open(grant),
+            # The inputs the applicant fills in (not headings, links or the deadline).
+            "asks_for": [f for f in grant.form_schema if not is_layout(f)],
             "application": application,
             "draft": draft,
             "similar": similar,

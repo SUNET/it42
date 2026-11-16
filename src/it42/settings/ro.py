@@ -32,7 +32,7 @@ TEMPLATES = templates(["it42.ro.members.access.member_context"])
 
 # The orgs (funders) that send signature requests: slug -> display name. The RO site
 # shows these names, never one an event claims.
-KNOWN_ORGS = {"o1": "Org 1", "o2": "Org 2"}
+KNOWN_ORGS = {"o1": "Org 1", "o2": "Org 2", "o3": "Formas", "o4": "Forte", "o5": "Vinnova"}
 
 SAML_CONFIG = build_saml_config(
     site_url=SITE_URL,

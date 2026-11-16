@@ -1,32 +1,58 @@
+{% load it42 %}
 {% comment %}
 One row of a grant application form built from its schema (formschema.form_layout):
 ``row.spec`` is the schema entry, ``row.field`` the bound field (None for layout entries).
+A ``deadline`` entry shows ``grant.deadline`` / ``grant.deadline_time`` from the context.
 {% endcomment %}
 {% if row.spec.type == "heading" %}
   <h2 class="h5 mt-4 mb-2">{{ row.spec.label }}</h2>
 {% elif row.spec.type == "paragraph" %}
   <p class="text-body-secondary">{{ row.spec.label|linebreaksbr }}</p>
-{% elif row.spec.type == "radio" or row.spec.type == "checkboxes" %}
+{% elif row.spec.type == "deadline" %}
+  <div class="it-form-block mb-3">
+    <span class="it-form-block-icon" aria-hidden="true">{% icon "calendar-check" %}</span>
+    <div>
+      <strong>{{ row.spec.label }}</strong>
+      {% if row.spec.description %}<span class="it-form-desc">{{ row.spec.description }}</span>{% endif %}
+      <p class="mb-0">{% if grant and grant.deadline %}Applications close <time datetime="{{ grant.deadline|date:'Y-m-d' }}{% if grant.deadline_time %}T{{ grant.deadline_time|time:'H:i' }}{% endif %}">{{ grant.deadline|date:"j F Y" }}{% if grant.deadline_time %}, {{ grant.deadline_time|time:"H:i" }} {{ grant.deadline|closing_timezone:grant.deadline_time }}{% endif %}</time>.{% else %}The closing date and time are set when the grant is published.{% endif %}</p>
+    </div>
+  </div>
+{% elif row.spec.type == "link" %}
+  {% if row.spec.url %}
+  <div class="it-form-block mb-3">
+    <span class="it-form-block-icon" aria-hidden="true">{% icon "arrow-square-out" %}</span>
+    <div>
+      <a href="{{ row.spec.url }}" target="_blank" rel="noopener">{{ row.spec.label }}</a>
+      {% if row.spec.description %}<span class="it-form-desc">{{ row.spec.description }}</span>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+{% elif row.spec.type == "radio" or row.spec.type == "checkboxes" or row.spec.type == "checkbox" %}
   <fieldset class="mb-3">
     <legend class="form-label fs-6">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</legend>
+    {% if row.spec.description %}<div class="it-form-desc">{{ row.spec.description }}</div>{% endif %}
+    {% if row.field.help_text %}<div class="it-form-help">{% icon "info" %}<span>{{ row.field.help_text }}</span></div>{% endif %}
     {% for choice in row.field %}
       <div class="form-check">{{ choice.tag }}<label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label></div>
     {% endfor %}
-    {% if row.field.help_text %}<div class="form-text">{{ row.field.help_text }}</div>{% endif %}
     {% for error in row.field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </fieldset>
-{% elif row.spec.type == "checkbox" %}
-  <div class="form-check mb-3">
+{% elif row.spec.type == "budget" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ row.field.id_for_label }}">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+    {% if row.spec.description %}<div class="it-form-desc">{{ row.spec.description }}</div>{% endif %}
+    {% if row.field.help_text %}<div class="it-form-help">{% icon "info" %}<span>{{ row.field.help_text }}</span></div>{% endif %}
     {{ row.field }}
-    <label class="form-check-label" for="{{ row.field.id_for_label }}">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
-    {% if row.field.help_text %}<div class="form-text">{{ row.field.help_text }}</div>{% endif %}
+    <div class="form-text" data-budget-note>One cost per line, written as <code>What it is for | amount</code>, in {{ row.spec.currency }}.{% if row.spec.max_award %} The total cannot go over {{ row.spec.max_award|amount }} {{ row.spec.currency }}.{% endif %}</div>
     {% for error in row.field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </div>
 {% else %}
   <div class="mb-3">
     <label class="form-label" for="{{ row.field.id_for_label }}">{{ row.field.label }}{% if row.field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+    {% if row.spec.description %}<div class="it-form-desc">{{ row.spec.description }}</div>{% endif %}
+    {% if row.field.help_text %}<div class="it-form-help">{% icon "info" %}<span>{{ row.field.help_text }}</span></div>{% endif %}
     {{ row.field }}
-    {% if row.field.help_text %}<div class="form-text">{{ row.field.help_text }}</div>{% endif %}
+    {% if row.spec.max_words %}<div class="form-text it-wordcount" data-wordcount="{{ row.field.id_for_label }}">Up to {{ row.spec.max_words }} words.</div>{% endif %}
     {% for error in row.field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </div>
 {% endif %}

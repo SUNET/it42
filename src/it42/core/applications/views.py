@@ -6,15 +6,15 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.http import HttpRequest, HttpResponse, QueryDict
+from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from it42.common import research_orgs
 from it42.common.activity import Event, Month, by_month
+from it42.common.formpresentation import application_presentation
 from it42.common.formschema import (
     answers_to_json,
-    form_layout,
     labelled_answers,
 )
 from it42.common.http import post_required
@@ -40,8 +40,7 @@ def raw_values(form: forms.BaseForm, data: QueryDict) -> dict[str, Any]:
     values = {}
     for name, form_field in form.fields.items():
         value = form_field.widget.value_from_datadict(data, {}, form.add_prefix(name))
-        if value not in (None, "", []):
-            values[name] = value
+        values[name] = value
     return values
 
 
@@ -54,10 +53,19 @@ def apply(request: HttpRequest, org_slug: str, grant_id: str) -> HttpResponse:
         .exclude(status__in=ENDED_BEFORE_REVIEW)
         .first()
     )
+    autosave = request.method == "POST" and request.POST.get("autosave") == "1"
     if existing:
+        if autosave:
+            return JsonResponse(
+                {"error": "This application has already been submitted."}, status=409
+            )
         messages.info(request, "You have already applied to this grant.")
         return redirect("my_application", existing.public_id)
     if not is_open(grant):
+        if autosave:
+            return JsonResponse(
+                {"error": "This call has closed. Your changes were not saved."}, status=409
+            )
         messages.error(request, "This grant is closed for applications.")
         return redirect("grant_detail", org_slug, grant_id)
     draft = ApplicationDraft.objects.filter(user=user, grant=grant).first()
@@ -70,9 +78,11 @@ def apply(request: HttpRequest, org_slug: str, grant_id: str) -> HttpResponse:
     if draft:
         initial.update(draft.data)
     form_class = application_form(grant.form_schema)
-    if request.method == "POST" and "save_draft" in request.POST:
+    if request.method == "POST" and ("save_draft" in request.POST or autosave):
         unbound = form_class(user_id=user.pk)
-        services.save_draft(user, grant, raw_values(unbound, request.POST))
+        saved = services.save_draft(user, grant, raw_values(unbound, request.POST))
+        if autosave:
+            return JsonResponse({"saved_at": saved.updated_at.isoformat()})
         messages.success(request, "Your draft was saved. Nothing is sent until you submit it.")
         return redirect("apply", org_slug, grant_id)
     form = form_class(request.POST or None, user_id=user.pk, initial=initial)
@@ -98,7 +108,10 @@ def apply(request: HttpRequest, org_slug: str, grant_id: str) -> HttpResponse:
         {
             "grant": grant,
             "form": form,
-            "rows": form_layout(grant.form_schema, form),
+            **application_presentation(grant.form_schema, form),
+            "title": grant.title,
+            "description": grant.description,
+            "org_name": grant.org_name,
             "confirm_missing": confirm_missing,
             "draft": draft,
         },

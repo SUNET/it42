@@ -23,7 +23,7 @@ def load_generator() -> ModuleType:
 @pytest.fixture
 def definitions(tmp_path: Path) -> dict:
     (tmp_path / "rabbitmq.env").write_text("RABBITMQ_ADMIN_USER=admin\nRABBITMQ_ADMIN_PASSWORD=a\n")
-    for zone in ("core", "o1", "o2", "ro"):
+    for zone in ("core", "o1", "o2", "o3", "o4", "o5", "ro"):
         (tmp_path / f"{zone}-mq.env").write_text(
             f"RABBITMQ_USER={zone}\nRABBITMQ_PASSWORD=pw-{zone}\n"
         )
@@ -39,7 +39,7 @@ def test_no_guest_user(definitions: dict) -> None:
     assert "guest" not in {u["name"] for u in definitions["users"]}
 
 
-@pytest.mark.parametrize("user", ["core", "o1", "o2", "ro"])
+@pytest.mark.parametrize("user", ["core", "o1", "o2", "o3", "o4", "o5", "ro"])
 def test_zone_users_cannot_configure_or_use_default_exchange(definitions: dict, user: str) -> None:
     # "^$" is RabbitMQ's documented "deny all"; it only matches the empty name of
     # the default exchange, which RabbitMQ never lets anyone declare or delete.
@@ -70,7 +70,7 @@ def test_org_permissions_are_limited_to_own_queues(definitions: dict) -> None:
 
 
 def test_ro_permissions_reach_only_the_orgs(definitions: dict) -> None:
-    for org in ("o1", "o2"):
+    for org in ("o1", "o2", "o3", "o4", "o5"):
         assert can(definitions, "ro", "write", f"ro-to-{org}")
         assert can(definitions, "ro", "read", f"{org}-to-ro")
     for forbidden in ("core-to-o1", "o1-to-core", "o1-to-ro", "ro-to-core", "ro-to-o1.dlq"):
@@ -108,3 +108,16 @@ def test_password_hash_format(definitions: dict) -> None:
     raw = base64.b64decode(core["password_hash"])
     salt, digest = raw[:4], raw[4:]
     assert digest == hashlib.sha256(salt + b"pw-core").digest()
+
+
+@pytest.mark.parametrize("org", ["o3", "o4", "o5"])
+def test_new_org_routes_and_isolation(definitions: dict, org: str) -> None:
+    for peer in ("core", "ro"):
+        assert can(definitions, org, "write", f"{org}-to-{peer}")
+        assert can(definitions, org, "read", f"{peer}-to-{org}")
+        assert can(definitions, peer, "write", f"{peer}-to-{org}")
+        assert can(definitions, peer, "read", f"{org}-to-{peer}")
+    for other in {"o1", "o2", "o3", "o4", "o5"} - {org}:
+        for peer in ("core", "ro"):
+            assert not can(definitions, org, "read", f"{peer}-to-{other}")
+            assert not can(definitions, org, "write", f"{other}-to-{peer}")

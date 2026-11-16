@@ -10,6 +10,10 @@ staticfiles/
 certs/
 secrets/
 env/*.env
+# Server-specific funding organisation configuration, including local templates.
+env/o[345].env.example
+env/o[345]-mq.env.example
+env/o[345]-review.env.example
 rabbitmq/definitions.json
 .env
 config/research_orgs.toml

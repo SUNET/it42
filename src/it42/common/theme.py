@@ -1,6 +1,7 @@
 """Site theme: name, primary colour and the text colour that is readable on it."""
 
 from typing import Any
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -36,13 +37,22 @@ def rgb_string(color: str) -> str:
     return ", ".join(str(v) for v in parse_hex(color))
 
 
+def core_site_host() -> str:
+    """The public site's host name, for prose like "listed on <host>" (from
+    CORE_SITE_URL in the org and RO settings; the core site is itself)."""
+    url = getattr(settings, "CORE_SITE_URL", "")
+    return urlsplit(url).netloc or settings.SITE_NAME
+
+
 def theme(request: HttpRequest) -> dict[str, Any]:
-    """Expose the site's name and colours to every template."""
+    """Expose the site's name, colours and the public site's address to every template."""
     color: str = settings.THEME_COLOR
     light = is_light(color)
     accent = darken(color) if light else color
     return {
         "SITE_NAME": settings.SITE_NAME,
+        "CORE_SITE_URL": getattr(settings, "CORE_SITE_URL", ""),
+        "CORE_SITE_HOST": core_site_host(),
         "THEME_COLOR": color,
         "THEME_COLOR_RGB": rgb_string(color),
         "THEME_IS_LIGHT": light,

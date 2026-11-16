@@ -4,16 +4,23 @@ A schema is a list of fields::
 
     [{"name": "budget", "label": "Budget (SEK)", "type": "number", "required": true}]
 
-Every entry has ``name``, ``label``, ``type`` and ``required`` and may have ``help_text``.
-Each type allows a few extra keys (see ``WIDGETS``). ``heading`` and ``paragraph`` are
-layout entries: they are shown on the form but have no answer. Documents are attached
-separately, so there is no file type.
+Every entry has ``name``, ``label``, ``type`` and ``required`` and may have ``help_text``
+(guidance shown in a box under the question) and ``description`` (a secondary line under
+the label). Each type allows a few extra keys (see ``WIDGETS``). ``heading``, ``paragraph``,
+``deadline`` and ``link`` are layout entries (``LAYOUT_TYPES``): they are shown on the form
+but have no answer. A ``deadline`` shows the grant's own closing date and time (at most one
+per form); a ``link`` holds a web address the funder sets (``url``, which a draft may leave
+empty: ``require_publishable`` refuses to publish without it). A ``budget`` is answered with
+a list of lines, ``[{"label": ..., "amount": "decimal"}]``, whose total may not exceed the
+field's ``max_award``. Documents are attached separately, so there is no file type.
 
 Every form built with the org's builder keeps three base fields (``BASE_FIELDS``): the
 applicant's name and email address, and the administrating organisation (type
 ``research_org``, a choice from the research organisation directory) that has to sign the
 application before the org reviews it. The org may make that one optional: an empty answer
-means no sign-off. ``require_base_fields`` checks all three.
+means no sign-off. ``require_base_fields`` checks all three. A new form also starts with
+``DEFAULT_FIELDS`` (grant summary, application deadline, funder website), which the org may
+remove or change; the builder marks them "Default" by name.
 
 Field names are never typed by users: ``assign_names`` derives them from the labels
 (the builder shows the result, the org derives them again when a draft is saved).
@@ -26,6 +33,8 @@ from decimal import Decimal
 from typing import Any
 
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 
 from . import research_orgs
 
@@ -34,41 +43,167 @@ MAX_OPTIONS = 50
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 RESERVED_NAMES = {"documents", "csrfmiddlewaretoken"}
 
-# type -> (palette label, palette group, extra keys the type accepts)
+# type -> palette label, hint and Phosphor icon, palette group (in palette order), extra
+# keys the type accepts. ``palette: False`` keeps a type valid but off the builder's palette.
 WIDGETS: dict[str, dict[str, Any]] = {
-    "text": {"label": "Short text", "group": "Text", "keys": ("placeholder", "max_length")},
+    "text": {
+        "label": "Short text",
+        "hint": "A line or two, like a title",
+        "icon": "text-t",
+        "group": "Text",
+        "keys": ("placeholder", "max_length"),
+    },
     "textarea": {
         "label": "Long text",
+        "hint": "Paragraphs, with a word limit",
+        "icon": "text-align-left",
         "group": "Text",
-        "keys": ("placeholder", "max_length", "rows"),
+        "keys": ("placeholder", "max_length", "max_words", "rows"),
     },
-    "email": {"label": "Email address", "group": "Text", "keys": ("placeholder",)},
-    "url": {"label": "Web address", "group": "Text", "keys": ("placeholder",)},
-    "tel": {"label": "Phone number", "group": "Text", "keys": ("placeholder",)},
-    "number": {"label": "Number (decimal)", "group": "Numbers", "keys": ("min", "max")},
-    "integer": {"label": "Whole number", "group": "Numbers", "keys": ("min", "max")},
-    "date": {"label": "Date", "group": "Dates", "keys": ()},
-    "time": {"label": "Time", "group": "Dates", "keys": ()},
-    "datetime": {"label": "Date and time", "group": "Dates", "keys": ()},
-    "select": {"label": "Dropdown", "group": "Choices", "keys": ("options",)},
-    "radio": {"label": "Radio buttons", "group": "Choices", "keys": ("options",)},
-    "checkboxes": {"label": "Checkbox group", "group": "Choices", "keys": ("options",)},
-    "checkbox": {"label": "Yes / no checkbox", "group": "Choices", "keys": ()},
+    "email": {
+        "label": "Email",
+        "hint": "Checked for a valid address",
+        "icon": "envelope-simple",
+        "group": "Text",
+        "keys": ("placeholder",),
+    },
+    "tel": {
+        "label": "Phone",
+        "hint": "With country code",
+        "icon": "phone",
+        "group": "Text",
+        "keys": ("placeholder",),
+    },
+    # Applicant-typed web addresses stay valid in older forms; the palette offers the
+    # funder-set "External link" block instead.
+    "url": {
+        "label": "Web address",
+        "hint": "A web address the applicant types",
+        "icon": "link",
+        "group": "Text",
+        "keys": ("placeholder",),
+        "palette": False,
+    },
+    "number": {
+        "label": "Decimal",
+        "hint": "Amounts with decimals, like 12.50",
+        "icon": "hash",
+        "group": "Numbers",
+        "keys": ("min", "max"),
+    },
+    "integer": {
+        "label": "Whole number",
+        "hint": "Counts, like team size",
+        "icon": "number-square-one",
+        "group": "Numbers",
+        "keys": ("min", "max"),
+    },
+    "date": {
+        "label": "Date",
+        "hint": "Day, month and year",
+        "icon": "calendar-blank",
+        "group": "Dates",
+        "keys": (),
+    },
+    "time": {
+        "label": "Time",
+        "hint": "Hours and minutes",
+        "icon": "clock",
+        "group": "Dates",
+        "keys": (),
+    },
+    "datetime": {
+        "label": "Date and time",
+        "hint": "A date with a time",
+        "icon": "calendar-check",
+        "group": "Dates",
+        "keys": (),
+    },
+    "select": {
+        "label": "Dropdown",
+        "hint": "Pick one from a list",
+        "icon": "caret-up-down",
+        "group": "Choices",
+        "keys": ("options",),
+    },
+    "radio": {
+        "label": "Radio buttons",
+        "hint": "Pick one, all options shown",
+        "icon": "radio-button",
+        "group": "Choices",
+        "keys": ("options",),
+    },
+    "checkboxes": {
+        "label": "Checkboxes",
+        "hint": "Pick any that apply",
+        "icon": "check-square",
+        "group": "Choices",
+        "keys": ("options",),
+    },
+    "checkbox": {
+        "label": "Yes / no",
+        "hint": "A single yes or no answer",
+        "icon": "toggle-left",
+        "group": "Choices",
+        "keys": (),
+    },
     # Only as the administrating_organisation base field, so not on the builder's palette.
     "research_org": {
         "label": "Administrating organisation",
+        "hint": "A research organisation from the directory",
+        "icon": "buildings",
         "group": "Choices",
         "keys": (),
         "palette": False,
     },
-    "heading": {"label": "Section heading", "group": "Layout", "keys": ()},
-    "paragraph": {"label": "Explanatory text", "group": "Layout", "keys": ()},
+    "budget": {
+        "label": "Budget",
+        "hint": "Line items with a total and max award",
+        "icon": "coins",
+        "group": "Grant",
+        "keys": ("currency", "max_award", "max_lines"),
+    },
+    "deadline": {
+        "label": "Deadline",
+        "hint": "Date and time applications close",
+        "icon": "calendar-check",
+        "group": "Grant",
+        "keys": (),
+    },
+    "link": {
+        "label": "External link",
+        "hint": "A web address applicants can open",
+        "icon": "link",
+        "group": "Grant",
+        "keys": ("url",),
+    },
+    "heading": {
+        "label": "Section heading",
+        "hint": "Starts a new part of the form",
+        "icon": "text-h",
+        "group": "Sections",
+        "keys": (),
+    },
+    "paragraph": {
+        "label": "Explanation text",
+        "hint": "Guidance shown to applicants",
+        "icon": "paragraph",
+        "group": "Sections",
+        "keys": (),
+    },
 }
 FIELD_TYPES = tuple(WIDGETS)
-LAYOUT_TYPES = ("heading", "paragraph")
+# Shown on the form, but with no answer.
+LAYOUT_TYPES = ("heading", "paragraph", "deadline", "link")
 CHOICE_TYPES = ("select", "radio", "checkboxes")
-COMMON_KEYS = ("name", "label", "type", "required", "help_text")
+COMMON_KEYS = ("name", "label", "type", "required", "help_text", "description")
 MAX_LENGTH_LIMIT = {"text": 500, "textarea": 10_000}
+MAX_WORDS_LIMIT = 5000
+CURRENCIES = ("SEK", "EUR", "GBP", "USD")
+MAX_AWARD_LIMIT = 1_000_000_000_000
+MAX_BUDGET_LINES = 30
+DEFAULT_BUDGET_LINES = 20
+_url_validator = URLValidator(schemes=["http", "https"])
 
 ADMIN_ORG_FIELD = "administrating_organisation"
 BASE_FIELDS: list[dict[str, Any]] = [
@@ -88,6 +223,33 @@ BASE_FIELDS: list[dict[str, Any]] = [
 BASE_FIELD_NAMES = tuple(f["name"] for f in BASE_FIELDS)
 # Base fields the org may make optional (the others must stay required).
 OPTIONAL_BASE_FIELDS = (ADMIN_ORG_FIELD,)
+# Added to every new form after the base fields. The org may edit or remove them; the
+# builder badges them "Default" by name (so a renamed one loses the badge).
+DEFAULT_FIELDS: list[dict[str, Any]] = [
+    {
+        "name": "grant_summary",
+        "label": "Grant summary",
+        "type": "text",
+        "required": True,
+        "description": "One or two sentences on what the project will do",
+        "max_length": 300,
+    },
+    {
+        "name": "application_deadline",
+        "label": "Application deadline",
+        "type": "deadline",
+        "required": False,
+        "description": "Applications close at this time",
+    },
+    {
+        "name": "funder_website",
+        "label": "Funder website",
+        "type": "link",
+        "required": False,
+        "description": "Where applicants can read the full call",
+    },
+]
+DEFAULT_FIELD_NAMES = tuple(f["name"] for f in DEFAULT_FIELDS)
 
 
 class SchemaError(ValueError):
@@ -145,7 +307,7 @@ def validate_schema(schema: object) -> list[dict[str, Any]]:
         raise SchemaError(f"A form can have at most {MAX_FIELDS} fields.")
     seen: set[str] = set()
     fields = []
-    org_fields = 0
+    org_fields = deadlines = 0
     for index, raw in enumerate(schema, start=1):
         if not isinstance(raw, dict):
             raise SchemaError(f"Field {index} must be an object.")
@@ -176,6 +338,10 @@ def validate_schema(schema: object) -> list[dict[str, Any]]:
             org_fields += 1
             if org_fields > 1:
                 raise SchemaError("A form can ask for the administrating organisation once.")
+        if field_type == "deadline":
+            deadlines += 1
+            if deadlines > 1:
+                raise SchemaError("A form can show the application deadline once.")
         seen.add(name)
         spec: dict[str, Any] = {
             "name": name,
@@ -185,14 +351,36 @@ def validate_schema(schema: object) -> list[dict[str, Any]]:
         }
         if help_text := _check_text(raw, "help_text", index, 500):
             spec["help_text"] = help_text
+        if description := _check_text(raw, "description", index, 300):
+            spec["description"] = description
         if placeholder := _check_text(raw, "placeholder", index, 200):
             spec["placeholder"] = placeholder
         if field_type in MAX_LENGTH_LIMIT and (
             max_length := _check_int(raw, "max_length", index, 1, MAX_LENGTH_LIMIT[field_type])
         ):
             spec["max_length"] = max_length
-        if field_type == "textarea" and (rows := _check_int(raw, "rows", index, 2, 20)):
-            spec["rows"] = rows
+        if field_type == "textarea":
+            if rows := _check_int(raw, "rows", index, 2, 20):
+                spec["rows"] = rows
+            if max_words := _check_int(raw, "max_words", index, 1, MAX_WORDS_LIMIT):
+                spec["max_words"] = max_words
+        if field_type == "budget":
+            currency = raw.get("currency", "SEK")
+            if currency not in CURRENCIES:
+                raise SchemaError(
+                    f"Field {index}: currency must be one of {', '.join(CURRENCIES)}."
+                )
+            spec["currency"] = currency
+            if max_award := _check_int(raw, "max_award", index, 1, MAX_AWARD_LIMIT):
+                spec["max_award"] = max_award
+            if max_lines := _check_int(raw, "max_lines", index, 1, MAX_BUDGET_LINES):
+                spec["max_lines"] = max_lines
+        if field_type == "link" and (url := _check_text(raw, "url", index, 500)):
+            try:
+                _url_validator(url)
+            except ValidationError:
+                raise SchemaError(f"Field {index}: url must be a web address.") from None
+            spec["url"] = url
         if field_type in ("number", "integer"):
             low = _check_bound(raw, "min", index, field_type)
             high = _check_bound(raw, "max", index, field_type)
@@ -267,6 +455,14 @@ def require_base_fields(schema: list[dict[str, Any]]) -> None:
             raise SchemaError(f"The {base['name']} field must be a required {base['type']} field.")
 
 
+def require_publishable(schema: list[dict[str, Any]]) -> None:
+    """What a draft may leave unfinished but a published form may not: every link block
+    needs its web address."""
+    for spec in schema:
+        if spec["type"] == "link" and not spec.get("url"):
+            raise SchemaError(f"The {spec['label']} link needs a web address before publishing.")
+
+
 def research_org_of(schema: list[dict[str, Any]], answers: dict[str, Any]) -> str:
     """The administrating organisation's slug chosen in ``answers``, or "" for none."""
     for spec in schema:
@@ -278,6 +474,161 @@ def research_org_of(schema: list[dict[str, Any]], answers: dict[str, Any]) -> st
 
 def is_layout(spec: dict[str, Any]) -> bool:
     return spec["type"] in LAYOUT_TYPES
+
+
+class MaxWordsValidator:
+    """Refuses a long-text answer with more than ``max_words`` words (a ``textarea``
+    field's ``max_words`` key). Words are whitespace-separated runs, as ``str.split``
+    counts them, so "e-mail" is one word and "1,500" is one word."""
+
+    def __init__(self, max_words: int) -> None:
+        self.max_words = max_words
+
+    def __call__(self, value: str) -> None:
+        words = len(value.split())
+        if words > self.max_words:
+            raise ValidationError(
+                f"Use at most {self.max_words} words (this has {words}).", code="max_words"
+            )
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, MaxWordsValidator) and other.max_words == self.max_words
+
+
+# Thousands separator in shown amounts: a narrow no-break space, so "42 000" never wraps.
+THOUSANDS_SEP = "\u202f"
+
+
+def format_amount(amount: str | int | Decimal) -> str:
+    """``"42000"`` -> ``"42 000"``, ``"12.5"`` -> ``"12.50"`` (``THOUSANDS_SEP`` between
+    thousands; two decimals only when there are any)."""
+    value = Decimal(amount)
+    text = f"{value:,.0f}" if value == value.to_integral() else f"{value:,.2f}"
+    return text.replace(",", THOUSANDS_SEP)
+
+
+def budget_total(lines: list[dict[str, Any]]) -> Decimal:
+    """The sum of the parsed budget lines' amounts (exact decimal arithmetic)."""
+    return sum((Decimal(line["amount"]) for line in lines), Decimal(0))
+
+
+def parse_budget(value: object) -> list[dict[str, str]]:
+    """The budget an applicant typed, as answer lines. Accepts the textarea's text (one
+    ``label | amount`` per line) or an already parsed list, as stored answers are.
+    Raises ``ValidationError`` for anything else."""
+    if isinstance(value, list):
+        raw_lines = []
+        for item in value:
+            if not isinstance(item, dict):
+                raise ValidationError("Each budget line needs a label and an amount.")
+            raw_lines.append((str(item.get("label", "")), str(item.get("amount", ""))))
+    elif isinstance(value, str):
+        raw_lines = []
+        for text in value.splitlines():
+            if not text.strip():
+                continue
+            label, sep, amount = text.rpartition("|")
+            if not sep:
+                raise ValidationError(
+                    f"Write each budget line as 'What it is for | amount', not {text.strip()!r}."
+                )
+            raw_lines.append((label, amount))
+    else:
+        raise ValidationError("Enter the budget as lines.")
+    lines = []
+    for label, amount in raw_lines:
+        label = label.strip()
+        if not label or len(label) > 200:
+            raise ValidationError("Each budget line needs a label of at most 200 characters.")
+        digits = re.sub(r"[\s\u00a0\u2009]", "", amount).replace(",", ".")
+        try:
+            number = Decimal(digits)
+        except (ArithmeticError, ValueError):
+            raise ValidationError(f"The amount for {label!r} must be a number.") from None
+        if not number.is_finite() or number < 0 or number >= MAX_AWARD_LIMIT:
+            raise ValidationError(f"The amount for {label!r} must be from 0 to {MAX_AWARD_LIMIT}.")
+        if number != number.quantize(Decimal("0.01")):
+            raise ValidationError(f"The amount for {label!r} can have at most 2 decimals.")
+        lines.append({"label": label, "amount": format(number.normalize(), "f")})
+    return lines
+
+
+class BudgetWidget(forms.Textarea):
+    """A textarea with one ``label | amount`` line per budget line; static/it42/budget.js
+    shows it as a table with a running total."""
+
+    def format_value(self, value: Any) -> str | None:
+        if isinstance(value, list):
+            value = "\n".join(f"{line['label']} | {line['amount']}" for line in value)
+        return super().format_value(value)
+
+
+class BudgetField(forms.Field):
+    """The form field for a ``budget`` schema entry. Its value is the list of parsed
+    lines (``parse_budget``); ``validate`` enforces the field's line limit and, when the
+    org set a ``max_award``, that the total stays under it. The widget attributes carry
+    the currency and limits for static/it42/budget.js."""
+
+    widget = BudgetWidget
+
+    def __init__(
+        self,
+        *,
+        currency: str,
+        max_award: int | None,
+        max_lines: int,
+        **kwargs: Any,
+    ) -> None:
+        self.currency, self.max_award, self.max_lines = currency, max_award, max_lines
+        super().__init__(**kwargs)
+        self.widget.attrs.update(
+            {
+                "rows": 6,
+                "data-budget": "true",
+                "data-currency": currency,
+                "data-max-award": "" if max_award is None else str(max_award),
+                "data-max-lines": str(max_lines),
+                "placeholder": "Staff costs | 42000",
+            }
+        )
+
+    def to_python(self, value: Any) -> list[dict[str, str]]:
+        """Lines from the textarea text, or from an already stored answer list (the org
+        re-validates received answers with the same form class)."""
+        if value in self.empty_values:
+            return []
+        return parse_budget(value)
+
+    def validate(self, value: list[dict[str, str]]) -> None:
+        """Required-ness (an empty list counts as empty), then the line and total limits."""
+        super().validate(value)
+        if len(value) > self.max_lines:
+            raise ValidationError(f"A budget can have at most {self.max_lines} lines.")
+        if self.max_award is not None and budget_total(value) > self.max_award:
+            raise ValidationError(
+                f"The total may not be more than {format_amount(self.max_award)} {self.currency}."
+            )
+
+
+class YesNoField(forms.TypedChoiceField):
+    """An explicit answer; required means either Yes or No must be selected."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(
+            choices=[("True", "Yes"), ("False", "No")],
+            coerce=lambda value: value == "True",
+            empty_value=None,
+            widget=forms.RadioSelect,
+            **kwargs,
+        )
+
+    def to_python(self, value: Any) -> str:
+        # Keep stored boolean answers and older checkbox submissions readable.
+        if value is True or value in ("on", "true"):
+            value = "True"
+        elif value is False or value == "false":
+            value = "False"
+        return super().to_python(value)
 
 
 def _form_field(spec: dict[str, Any]) -> forms.Field:
@@ -293,9 +644,20 @@ def _form_field(spec: dict[str, Any]) -> forms.Field:
     match spec["type"]:
         case "textarea":
             attrs["rows"] = spec.get("rows", 5)
+            validators = [MaxWordsValidator(spec["max_words"])] if "max_words" in spec else []
+            if "max_words" in spec:
+                attrs["data-max-words"] = spec["max_words"]  # static/it42/wordcount.js
             return forms.CharField(
                 max_length=spec.get("max_length", 10_000),
                 widget=forms.Textarea(attrs=attrs),
+                validators=validators,
+                **common,
+            )
+        case "budget":
+            return BudgetField(
+                currency=spec["currency"],
+                max_award=spec.get("max_award"),
+                max_lines=spec.get("max_lines", DEFAULT_BUDGET_LINES),
                 **common,
             )
         case "email":
@@ -339,7 +701,7 @@ def _form_field(spec: dict[str, Any]) -> forms.Field:
                 choices=choices, widget=forms.CheckboxSelectMultiple, **common
             )
         case "checkbox":
-            return forms.BooleanField(**common)
+            return YesNoField(**common)
         case "research_org":
             orgs = research_orgs.choices()
             if not spec["required"]:
@@ -392,6 +754,19 @@ def answers_to_json(cleaned_data: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def display_budget(lines: object, currency: str) -> str:
+    """``"Staff costs: 42 000 SEK; Equipment: 12 500 SEK; Total: 54 500 SEK"``."""
+    try:
+        parsed = parse_budget(lines) if lines else []
+    except ValidationError:
+        return display_value(lines)
+    if not parsed:
+        return ""
+    parts = [f"{line['label']}: {format_amount(line['amount'])} {currency}" for line in parsed]
+    parts.append(f"Total: {format_amount(budget_total(parsed))} {currency}")
+    return "; ".join(parts)
+
+
 def display_value(value: Any) -> str:
     if isinstance(value, bool):
         return "Yes" if value else "No"
@@ -414,6 +789,8 @@ def labelled_answers(
         value = answers.get(spec["name"])
         if spec["type"] == "research_org":
             out.append((spec["label"], research_orgs.name_of(value) if value else "None"))
+        elif spec["type"] == "budget":
+            out.append((spec["label"], display_budget(value, spec.get("currency", "SEK"))))
         else:
             out.append((spec["label"], display_value(value)))
     return out

@@ -204,7 +204,7 @@ def test_apply_form_is_prefilled_and_rendered_from_the_layout(
         f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/"
     ).content.decode()
     assert 'value="Oskar Bergström"' in body and 'value="a2@kth.se"' in body
-    assert '<h2 class="h5 mt-4 mb-2">About the project</h2>' in body
+    assert '<h2 class="it-preview-section">About the project</h2>' in body
     assert "Keep it short." in body
     assert 'type="radio"' in body and 'class="form-check-input"' in body
     assert "form-select" in body and "<option" in body
@@ -371,3 +371,129 @@ def test_no_draft_for_a_closed_grant(
     response = save_draft(u2_client, grant, project_title="x")
     assert response.status_code == 302
     assert not ApplicationDraft.objects.exists()
+
+
+BUDGET_SCHEMA = [
+    {"name": "applicant_name", "label": "Your name", "type": "text", "required": True},
+    {"name": "applicant_email", "label": "Email address", "type": "email", "required": True},
+    {
+        "name": "summary",
+        "label": "Grant summary",
+        "type": "text",
+        "required": True,
+        "description": "One or two sentences",
+        "help_text": "Reviewers read this first.",
+    },
+    {"name": "closes", "label": "Application deadline", "type": "deadline"},
+    {"name": "call", "label": "Funder website", "type": "link", "url": "https://formas.example/x"},
+    {
+        "name": "costs",
+        "label": "Budget breakdown",
+        "type": "budget",
+        "required": True,
+        "max_award": 75000,
+    },
+]
+
+
+def test_apply_page_shows_the_funder_blocks_and_the_budget(
+    u2_client: Client, make_grant: Callable[..., PublicGrant]
+) -> None:
+    from datetime import time
+
+    grant = make_grant(form_schema=BUDGET_SCHEMA, deadline_time=time(17, 0))
+    body = u2_client.get(
+        f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/"
+    ).content.decode()
+    assert "Closes" in body and ", 17:00" in body
+    assert 'href="https://formas.example/x"' in body and "Funder website" in body
+    assert "One or two sentences" in body and "Reviewers read this first." in body
+    assert 'data-budget="true"' in body and 'data-max-award="75000"' in body
+    assert "it42/budget.js" in body
+    # Funder blocks are not inputs.
+    assert 'name="closes"' not in body and 'name="call"' not in body
+
+
+def test_apply_with_a_budget_round_trips_and_respects_the_max_award(
+    u2_client: Client, make_grant: Callable[..., PublicGrant]
+) -> None:
+    grant = make_grant(form_schema=BUDGET_SCHEMA)
+    answers = {"applicant_name": "Oskar", "applicant_email": "oskar@kth.se", "summary": "s"}
+    over = apply(u2_client, grant, costs="Staff | 70000\nTravel | 5001", **answers)
+    assert over.status_code == 200 and not ApplicationCopy.objects.exists()
+    assert "75" in over.content.decode() and "000 SEK" in over.content.decode()
+    ok = apply(u2_client, grant, costs="Staff | 42 000\nEquipment | 12500.50", **answers)
+    assert ok.status_code == 302
+    application = ApplicationCopy.objects.get()
+    assert application.answers["costs"] == [
+        {"label": "Staff", "amount": "42000"},
+        {"label": "Equipment", "amount": "12500.5"},
+    ]
+    body = u2_client.get(f"/my/applications/{application.public_id}/").content.decode()
+    assert "Staff: 42" in body and "Total: 54" in body and "500.50 SEK" in body
+
+
+def test_apply_is_refused_after_the_closing_time(
+    u2_client: Client, make_grant: Callable[..., PublicGrant]
+) -> None:
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    now = timezone.localtime()
+    grant = make_grant(deadline=now.date(), deadline_time=(now - timedelta(minutes=5)).time())
+    apply(u2_client, grant, **ANSWERS)
+    assert not ApplicationCopy.objects.exists()
+    grant.deadline_time = (now + timedelta(hours=1)).time()
+    grant.save()
+    assert apply(u2_client, grant, **ANSWERS).status_code == 302
+
+
+def test_autosave_keeps_partial_and_cleared_answers_private(
+    u2_client: Client,
+    a2: User,
+    make_grant: Callable[..., PublicGrant],
+    make_user: Callable[..., User],
+) -> None:
+    grant = make_grant(form_schema=RICH_SCHEMA)
+    url = f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/"
+    response = u2_client.post(url, {"autosave": "1", "applicant_name": "", "years": "unfinished"})
+    assert response.status_code == 200 and response.json()["saved_at"]
+    draft = ApplicationDraft.objects.get(user=a2, grant=grant)
+    assert draft.data["applicant_name"] == "" and draft.data["years"] == "unfinished"
+    assert not ApplicationCopy.objects.exists() and not OutboxEvent.objects.exists()
+    page = u2_client.get(url)
+    assert page.context["form"]["applicant_name"].value() == ""
+    other = Client()
+    other.force_login(make_user("autosave-other"))
+    assert other.get(url).context["draft"] is None
+    grant.status = PublicGrant.Status.CLOSED
+    grant.save()
+    response = u2_client.post(url, {"autosave": "1", "years": "changed"})
+    assert response.status_code == 409
+    draft.refresh_from_db()
+    assert draft.data["years"] == "unfinished"
+
+
+def test_autosave_after_submission_does_not_recreate_draft(
+    u2_client: Client, make_grant: Callable[..., PublicGrant]
+) -> None:
+    grant = make_grant()
+    apply(u2_client, grant, **ANSWERS)
+    response = u2_client.post(
+        f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/",
+        {"autosave": "1", **ANSWERS},
+    )
+    assert response.status_code == 409 and not ApplicationDraft.objects.exists()
+
+
+def test_application_uses_numbered_questions_with_separate_identity(
+    u2_client: Client, make_grant: Callable[..., PublicGrant]
+) -> None:
+    grant = make_grant(form_schema=BUDGET_SCHEMA)
+    response = u2_client.get(f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/")
+    assert response.context["counts"]["questions"] == 2
+    assert len(response.context["identity_rows"]) == 2
+    body = response.content.decode()
+    assert "data-progress-count" in body and "it42/application-form.js" in body
+    assert "1. Your name" not in body

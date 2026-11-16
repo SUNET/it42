@@ -23,7 +23,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 VHOST = "/it42"
-ORGS = ("o1", "o2")
+ORGS = ("o1", "o2", "o3", "o4", "o5")
 RO = "ro"
 DLX = "it42.dlx"
 DELIVERY_LIMIT = 5
