@@ -16,6 +16,7 @@ from it42.org.review.models import (
     Meeting,
     PanelMember,
     PanelTask,
+    ReviewerNote,
 )
 from tests.board_browser import board_browser
 
@@ -527,3 +528,41 @@ def test_review_card_protects_unsaved_text(
         field.fill(original)
         field.press("Escape")
         dialog.wait_for(state="hidden")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_saving_note_guards_unsaved_assessment(
+    make_grant, make_panel, make_application, make_seat, assign, make_task, seat_client
+) -> None:
+    s = _setup(make_grant, make_panel, make_application, make_seat, assign)
+    panel = s["panel"]
+    make_task(panel, PanelTask.Kind.ASSESSMENT)
+    with board_browser(seat_client(s["reviewer"])) as page:
+        page.goto(f"/panels/{panel.pk}/")
+        page.locator(f'a[data-board-card][href="{s["url"]}"]').last.click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        assessment = frame.locator('textarea[name="assessment"]')
+        assessment.fill("Assessment in progress")
+        frame.get_by_role("tab", name="My notes").click()
+        note = frame.get_by_role("textbox", name="Private note")
+        note.fill("Private reminder")
+        save_note = frame.get_by_role("button", name="Save note")
+        with page.expect_event("dialog", timeout=5000) as warning:
+            page.once("dialog", lambda prompt: prompt.dismiss())
+            save_note.click()
+        assert warning.value.type == "beforeunload"
+        assert assessment.input_value() == "Assessment in progress"
+        assert note.input_value() == "Private reminder"
+        # With the assessment reverted, the cancelled submission's note is still dirty.
+        assessment.fill("")
+        with page.expect_event("dialog", timeout=5000):
+            page.once("dialog", lambda prompt: prompt.dismiss())
+            page.evaluate("location.reload()")
+        assert note.input_value() == "Private reminder"
+        assessment.fill("Assessment in progress")
+        with page.expect_event("dialog", timeout=5000):
+            page.once("dialog", lambda prompt: prompt.accept())
+            save_note.click()
+        page.wait_for_url(f"**{s['url']}#notes")
+    assert ReviewerNote.objects.get().text == "Private reminder"
+    assert not Assessment.objects.exists()

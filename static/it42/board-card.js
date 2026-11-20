@@ -16,13 +16,29 @@
       link.href = cardUrl(link.href).href;
       link.target = "_self";
     });
-    // Forms that save on POST can close quietly when their values match the initial ones.
-    document.querySelectorAll("form[data-guard-card-edits]").forEach(form => {
-      const values = () => new URLSearchParams(new FormData(form)).toString();
-      const initial = values();
-      document.addEventListener("it42-card-dismiss", event => {
-        if (values() !== initial) event.preventDefault();
-      });
+    const forms = [...document.querySelectorAll("form[data-guard-card-edits]")];
+    if (!forms.length) return;
+    const values = form => new URLSearchParams(new FormData(form)).toString();
+    const initial = new Map(forms.map(form => [form, values(form)]));
+    function hasEdits(except) {
+      return forms.some(form => form !== except && values(form) !== initial.get(form));
+    }
+    document.addEventListener("it42-card-dismiss", event => {
+      if (hasEdits()) event.preventDefault();
+    });
+    // Native form submissions navigate out of the card. Exempt only the form being
+    // posted, and consume that exemption even if the user cancels navigation.
+    let submission;
+    window.addEventListener("submit", event => {
+      submission = event;
+    });
+    window.addEventListener("beforeunload", event => {
+      const saving = submission && !submission.defaultPrevented ? submission.target : null;
+      submission = null;
+      if (hasEdits(saving)) {
+        event.preventDefault();
+        event.returnValue = true;
+      }
     });
     return;
   }
