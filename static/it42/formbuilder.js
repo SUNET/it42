@@ -984,12 +984,15 @@
   form.addEventListener("submit", () => {
     submitting = true;
   });
-  window.addEventListener("beforeunload", (event) => {
+  // Both page navigation and closing an embedded editor must protect unsaved work.
+  function guardUnsaved(event) {
     if (dirty && !submitting) {
       event.preventDefault();
-      event.returnValue = "";
+      if (event.type === "beforeunload") event.returnValue = "";
     }
-  });
+  }
+  window.addEventListener("beforeunload", guardUnsaved);
+  document.addEventListener("it42-card-dismiss", guardUnsaved);
   // The preview opens in a new tab: the page stays, so allow leaving again afterwards.
   window.addEventListener("pageshow", () => { submitting = false; });
   window.addEventListener("focus", () => { submitting = false; });

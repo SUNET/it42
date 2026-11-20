@@ -35,7 +35,7 @@
     <div class="it-app-card-top">
       {% if app.status == 'approved' %}{% include 'includes/status_pill.html' with tone='solid-green' label='Accepted' %}{% else %}{% include 'includes/status_pill.html' with tone='red' label='Declined' %}{% endif %}
     </div>
-    <h3><a href="{% url 'application_detail' app.pk %}">{{ app.answers.project_title|default:app.applicant_name }}</a></h3>
+    <h3><a data-board-card href="{% url 'application_detail' app.pk %}">{{ app.answers.project_title|default:app.applicant_name }}</a></h3>
     <div class="it-app-card-grant">{% icon "hand-coins" %}<div><strong>{{ app.grant.title }}</strong><span>{{ ORG_NAME }}</span></div></div>
     <div class="it-person"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ app.applicant_name|initials }}</span>{{ app.applicant_name }}</div>
     <div class="it-meta">{% if app.decided_by %}Decision by {{ app.decided_by }}{% else %}Decision maker not recorded{% endif %}</div>

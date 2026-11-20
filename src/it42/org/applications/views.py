@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import dateformat, timezone
 
 from it42.common.formschema import labelled_answers
-from it42.common.http import post_required
+from it42.common.http import board_card, post_required
 from it42.common.statuses import (
     ENDED_BEFORE_REVIEW,
     ORG_SETTABLE_STATUSES,
@@ -36,6 +36,7 @@ def _text(request: HttpRequest) -> str | None:
     return text
 
 
+@board_card
 def for_grant(request: HttpRequest, grant_id: int) -> HttpResponse:
     """Compare applicants (Grants / Views / Granter - Compare applicants): every
     application of the grant with its review progress, best shared score first, filtered
@@ -111,6 +112,7 @@ def _steps(application: Application, assigned: int) -> tuple[int, list[dict[str,
     return stage, steps
 
 
+@board_card
 def detail(request: HttpRequest, application_id: int) -> HttpResponse:
     application = get_object_or_404(
         Application.objects.select_related("grant", "grant__created_by", "decided_by"),

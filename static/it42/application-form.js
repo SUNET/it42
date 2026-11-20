@@ -84,7 +84,11 @@
     await inFlight; inFlight = null;
   }
   form.addEventListener("input", changed);
-  form.addEventListener("change", changed);
+  // The enhanced select emits a change event. Native text changes already emitted input,
+  // and their later blur must not mark an autosaved draft as dirty again.
+  form.addEventListener("change", event => {
+    if (event.target.matches("select")) changed(event);
+  });
   // Wait for any older autosave before the final POST so it cannot recreate a submitted draft.
   form.addEventListener("submit", async event => {
     if (leaving) return;
@@ -96,9 +100,15 @@
     if (inFlight) await inFlight;
     form.requestSubmit(button);
   });
-  window.addEventListener("beforeunload", event => {
-    if (!leaving && savedRevision < revision) { event.preventDefault(); event.returnValue = ""; }
-  });
+  // Both page navigation and closing an embedded editor must protect unsaved work.
+  function guardUnsaved(event) {
+    if (!leaving && savedRevision < revision) {
+      event.preventDefault();
+      if (event.type === "beforeunload") event.returnValue = "";
+    }
+  }
+  window.addEventListener("beforeunload", guardUnsaved);
+  document.addEventListener("it42-card-dismiss", guardUnsaved);
   window.addEventListener("pageshow", () => { leaving = false; });
   setInterval(() => {
     if (savedAt && savedRevision === revision && !inFlight) {

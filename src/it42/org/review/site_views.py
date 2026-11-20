@@ -19,7 +19,7 @@ from django.utils import dateformat, timezone
 
 from it42.common.agenda import Deadline, agenda
 from it42.common.formschema import labelled_answers
-from it42.common.http import post_required
+from it42.common.http import board_card, post_required
 from it42.org.applications.models import Application, ApplicationDocument
 
 from . import access, services
@@ -179,6 +179,7 @@ def _timeline(
     return items
 
 
+@board_card
 def panel_detail(request: HttpRequest, panel_id: int) -> HttpResponse:
     seat = _seat(request, panel_id)
     panel = seat.panel
@@ -237,6 +238,7 @@ def panel_detail(request: HttpRequest, panel_id: int) -> HttpResponse:
     )
 
 
+@board_card
 def application_detail(request: HttpRequest, panel_id: int, application_id: int) -> HttpResponse:
     seat = _seat(request, panel_id)
     panel = seat.panel

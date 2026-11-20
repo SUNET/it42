@@ -9,7 +9,7 @@
     <p>{{ application_count }} application{{ application_count|pluralize }} · {{ reviewers|length }} reviewer{{ reviewers|length|pluralize }} · Chair: {% if chair == "You" %}You{% elif chair %}{{ chair.display_name }}{% else %}not set{% endif %}{% if panel.description %} · {{ panel.description }}{% endif %}</p>
   </div>
   {% for row in applications %}{% if forloop.first and row.state.assigned and not row.state.assessed %}
-    <div class="it-toolbar-actions"><a class="btn btn-primary" href="{% url 'review_application' panel.pk row.application.pk %}">Continue reviewing {% icon "caret-right" %}</a></div>
+    <div class="it-toolbar-actions"><a class="btn btn-primary" data-board-card href="{% url 'review_application' panel.pk row.application.pk %}">Continue reviewing {% icon "caret-right" %}</a></div>
   {% endif %}{% endfor %}
 </div>
 
@@ -79,7 +79,7 @@
         {% for row in applications %}
           {% with application=row.application state=row.state %}
           <tr data-application="{{ application.applicant_name }}"{% if state.assigned and not state.assessed %} class="is-todo"{% endif %}>
-            <td><a href="{% url 'review_application' panel.pk application.pk %}">{{ application.applicant_name }}</a><br><span class="it-meta">{{ application.grant.title }}</span></td>
+            <td><a data-board-card href="{% url 'review_application' panel.pk application.pk %}">{{ application.applicant_name }}</a><br><span class="it-meta">{{ application.grant.title }}</span></td>
             <td>{% if not state.assigned %}<span class="text-body-secondary">not assigned</span>{% elif state.declared %}{% include "includes/status_pill.html" with tone="green" label="declared" %}{% else %}{% include "includes/status_pill.html" with tone="peach" label="to do" %}{% endif %}</td>
             <td>{% if not state.assigned %}<span class="text-body-secondary">not assigned</span>{% elif state.assessed %}<span class="it-score">{{ row.grade }}<small>/10</small></span>{% include "includes/status_pill.html" with tone="green" label="written" %}{% else %}{% include "includes/status_pill.html" with tone="peach" label="to do" %}{% endif %}</td>
             <td>{% if shared %}{% if row.avg is not None %}<span class="it-score">{{ row.avg|floatformat:1 }}<small> · {{ row.scores|length }} review{{ row.scores|length|pluralize }}</small></span>{% else %}<span class="it-meta">No reviews</span>{% endif %}{% else %}<span class="it-meta">{% icon "eye-slash" %}Hidden</span>{% endif %}</td>

@@ -76,7 +76,7 @@
             <tbody>
             {% for application, assigned in applications %}
               <tr>
-                <td><a href="{% url 'panel_application' panel.pk application.pk %}">{{ application.applicant_name }}</a></td>
+                <td><a data-board-card href="{% url 'panel_application' panel.pk application.pk %}">{{ application.applicant_name }}</a></td>
                 <td>{{ application.grant.title }}</td>
                 <td>{% status_pill application.status %}</td>
                 <td>{{ assigned }} reviewer{{ assigned|pluralize }}</td>

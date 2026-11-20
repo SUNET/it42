@@ -14,6 +14,7 @@ from it42.core.accounts.models import User
 from it42.core.applications.models import ApplicationCopy, ApplicationDraft, StatusChange
 from it42.core.catalog.models import PublicGrant
 from it42.core.profiles.models import Document
+from tests.board_browser import board_browser
 
 from .conftest import PDF
 
@@ -497,3 +498,24 @@ def test_application_uses_numbered_questions_with_separate_identity(
     body = response.content.decode()
     assert "data-progress-count" in body and "it42/application-form.js" in body
     assert "1. Your name" not in body
+
+
+@pytest.mark.django_db(transaction=True)
+def test_draft_card_saves_answers_inside_board(u2_client, a2, make_grant) -> None:
+    """The embedded editor autosaves to the application and protects a dirty draft on dismissal."""
+    grant = make_grant()
+    draft = ApplicationDraft.objects.create(user=a2, grant=grant)
+    with board_browser(u2_client) as page:
+        page.goto("/my/applications/")
+        page.locator("a[data-board-card]").click()
+        dialog = page.get_by_role("dialog")
+        field = dialog.frame_locator("iframe").locator('[name="project_title"]')
+        field.fill("Saved inside card")
+        page.once("dialog", lambda prompt: prompt.dismiss())
+        field.press("Escape")
+        assert dialog.is_visible()
+        dialog.frame_locator("iframe").get_by_text("Saved just now", exact=True).first.wait_for()
+        page.get_by_role("button", name="Close card").click()
+        dialog.wait_for(state="hidden")
+    draft.refresh_from_db()
+    assert draft.data["project_title"] == "Saved inside card"

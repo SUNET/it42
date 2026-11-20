@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from it42.common.agenda import Deadline, agenda
 from it42.common.formschema import labelled_answers
-from it42.common.http import post_required
+from it42.common.http import board_card, post_required
 from it42.ro.accounts.models import User
 from it42.ro.members.access import member
 
@@ -100,6 +100,7 @@ def _feed(requests: list[SignatureRequest], limit: int = 5) -> list[dict[str, An
     return sorted(notes, key=lambda n: n["when"], reverse=True)[:limit]
 
 
+@board_card
 def detail(request: HttpRequest, request_id: int) -> HttpResponse:
     membership = member(request)
     signature_request = get_object_or_404(

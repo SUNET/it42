@@ -4,6 +4,7 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
+import pytest
 from django.test import Client
 from django.utils import timezone
 
@@ -16,6 +17,7 @@ from it42.org.review.models import (
     PanelMember,
     PanelTask,
 )
+from tests.board_browser import board_browser
 
 PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
 
@@ -477,3 +479,20 @@ def test_logged_out_page_uses_the_reviewer_design(review_site: None, db: None) -
     response = Client().get("/logged-out/")
     assert response.status_code == 200
     assert b"You have been logged out" in response.content and b"it-reviewer" in response.content
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reviewer_opens_panel_over_board(make_panel, make_seat, seat_client) -> None:
+    """The reviewer's panel keeps its own contents and the board underneath."""
+    panel = make_panel("Research panel")
+    client = seat_client(make_seat(panel, "r1@example.org"))
+    with board_browser(client) as page:
+        page.goto("/")
+        page.get_by_role("link", name="Open Research panel").click()
+        dialog = page.get_by_role("dialog")
+        dialog.frame_locator("iframe").get_by_role(
+            "heading", name="Research panel"
+        ).first.wait_for()
+        page.get_by_role("button", name="Close card").click()
+        dialog.wait_for(state="hidden")
+        assert page.get_by_role("heading", name="My review panels").is_visible()

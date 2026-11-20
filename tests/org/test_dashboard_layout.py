@@ -8,6 +8,7 @@ from django.conf import settings
 from django.test import Client
 
 from it42.org.grants.models import Grant
+from tests.board_browser import board_browser
 
 
 @pytest.mark.parametrize("size", ["1440,900", "600,640"])
@@ -66,3 +67,67 @@ def test_dashboard_scrolls_between_navigation_panels(
         timeout=30,
     )
     assert "<title>Dashboard scroll passed</title>" in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("destination", "site", "expected"),
+    [
+        ("iframe", "same-origin", "SAMEORIGIN"),
+        ("iframe", "same-site", "DENY"),
+        ("iframe", "cross-site", "DENY"),
+        ("document", "same-origin", "DENY"),
+    ],
+)
+def test_card_framing_is_limited_to_its_board(
+    destination: str,
+    site: str,
+    expected: str,
+    admin_client: Client,
+    make_grant: Callable[..., Grant],
+) -> None:
+    """Only the same site's card request can embed this otherwise standalone view."""
+    grant = make_grant()
+    path = f"/grants/{grant.pk}/applications/"
+    response = admin_client.get(
+        path, {"board_card": "1"}, headers={"Sec-Fetch-Dest": destination, "Sec-Fetch-Site": site}
+    )
+    assert response.status_code == 200
+    assert response.headers["X-Frame-Options"] == expected
+    assert (b'<base target="_top">' in response.content) == (expected == "SAMEORIGIN")
+    assert admin_client.get(path).headers["X-Frame-Options"] == "DENY"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_application_opens_over_the_board(
+    admin_client: Client, make_application, tmp_path: Path
+) -> None:
+    """Exercise the real board link, card tabs, backdrop, keyboard and focus restoration."""
+    application = make_application(name="Sam Rivera")
+    with board_browser(admin_client) as page:
+        for width, height in [(1920, 1024), (390, 844)]:
+            page.set_viewport_size({"width": width, "height": height})
+            page.goto("/?sort=deadline")
+            link = page.get_by_role("link", name=application.applicant_name, exact=True).first
+            link.focus()
+            board = page.locator(".it-board")
+            scroll = board.evaluate("(el) => [el.scrollLeft, el.closest('main').scrollTop]")
+            link.press("Enter")
+            dialog = page.get_by_role("dialog")
+            frame = dialog.frame_locator("iframe")
+            reviews = frame.get_by_role("tab", name="Reviews")
+            reviews.wait_for()
+            page.screenshot(path=tmp_path / f"granter-card-{width}.png")
+            reviews.click()
+            assert reviews.get_attribute("aria-selected") == "true"
+            assert dialog.evaluate("(el) => el.matches(':modal')")
+            assert page.url.endswith("/?sort=deadline")
+            frame.get_by_role("tab", name="Proposal").click()
+            page.get_by_role("button", name="Expand card").click()
+            page.get_by_role("button", name="Restore card size").click()
+            page.mouse.click(2, 2)
+            dialog.wait_for(state="hidden")
+            assert link.evaluate("(el) => el === document.activeElement")
+            assert board.evaluate("(el) => [el.scrollLeft, el.closest('main').scrollTop]") == scroll
+            link.press("Enter")
+            frame.get_by_role("tab", name="Proposal").press("Escape")
+            dialog.wait_for(state="hidden")
