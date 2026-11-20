@@ -26,6 +26,7 @@
         <span class="it-column-dot" aria-hidden="true"></span>
         <h2 id="col-{{ column.key }}">{{ column.title }}</h2>
         <span class="it-count">{{ column.cards|length }}</span>
+        {% if column.key == "decided" %}<a class="it-column-add" href="{% url 'grant_archive' %}" aria-label="Archived applications" title="Archived applications">{% icon "archive" %}</a>{% endif %}
         {% if column.key == "published" %}<a class="it-column-add" href="{% url 'grant_published' %}" aria-label="All published grants" title="All published grants">{% icon "arrow-up-right" %}</a>{% endif %}
         {% if column.key == "draft" and is_org_admin %}<a class="it-column-add" href="{% url 'grant_create' %}" aria-label="New grant" title="New grant">{% icon "plus" %}</a>{% endif %}
       </div>

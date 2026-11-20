@@ -1,0 +1,51 @@
+{% extends "org/dashboard.html" %}
+{% load it42 %}
+{% block title %}Archived applications · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">Archive</li>{% endblock %}
+{% block content %}
+<div class="it-toolbar">
+  <div>
+    <h1>Archived applications</h1>
+    <p>Applications move here one month after a decision.</p>
+  </div>
+  <div class="it-toolbar-actions">
+    <form method="get" role="search" class="it-cv-search">
+      <label for="archive-search" class="visually-hidden">Search by application, applicant or grant name</label>
+      <input type="search" name="q" id="archive-search" value="{{ query }}" placeholder="Search applications">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="status" value="{{ current }}">
+      <button class="btn btn-sm" type="submit" aria-label="Search">{% icon "magnifying-glass" %}</button>
+    </form>
+    <span class="it-sort-label">Sort by</span>
+    <nav class="it-segments" aria-label="Sort archived applications">
+      <a href="{% querystring sort='newest' %}"{% if sort == 'newest' %} aria-current="true"{% endif %}>Newest first</a>
+      <a href="{% querystring sort='oldest' %}"{% if sort == 'oldest' %} aria-current="true"{% endif %}>Oldest first</a>
+    </nav>
+  </div>
+</div>
+<nav class="it-segments it-archive-filters" aria-label="Filter by outcome">
+  <span class="it-sort-label">Filter</span>
+  <a href="{% querystring status=None %}"{% if not current %} aria-current="true"{% endif %}>All <span class="it-segment-count">{{ total }}</span></a>
+  {% for value, label, count in tabs %}<a href="{% querystring status=value %}"{% if current == value %} aria-current="true"{% endif %}>{{ label }} <span class="it-segment-count">{{ count }}</span></a>{% endfor %}
+</nav>
+{% if applications %}
+<ul class="it-archive-grid">
+  {% for app in applications %}
+  <li class="it-app-card">
+    <div class="it-app-card-top">
+      {% if app.status == 'approved' %}{% include 'includes/status_pill.html' with tone='solid-green' label='Accepted' %}{% else %}{% include 'includes/status_pill.html' with tone='red' label='Declined' %}{% endif %}
+    </div>
+    <h3><a href="{% url 'application_detail' app.pk %}">{{ app.answers.project_title|default:app.applicant_name }}</a></h3>
+    <div class="it-app-card-grant">{% icon "hand-coins" %}<div><strong>{{ app.grant.title }}</strong><span>{{ ORG_NAME }}</span></div></div>
+    <div class="it-person"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ app.applicant_name|initials }}</span>{{ app.applicant_name }}</div>
+    <div class="it-meta">{% if app.decided_by %}Decision by {{ app.decided_by }}{% else %}Decision maker not recorded{% endif %}</div>
+    <div class="it-app-card-foot">
+      <span class="it-meta">{% icon "calendar-blank" %}{% if app.decided_at %}Decided {{ app.decided_at|date:"j M Y" }}{% else %}Archived {{ app.archive_at|date:"j M Y" }}{% endif %}</span>
+      <span class="it-meta" title="Questions to the applicant">{% icon "chat-circle" %}{{ app.question_count }}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% elif query or current %}<p>No archived applications match these filters. <a href="{% url 'grant_archive' %}">Clear filters</a></p>
+{% else %}<p>No archived applications yet.</p>{% endif %}
+{% endblock %}

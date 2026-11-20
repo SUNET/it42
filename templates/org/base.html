@@ -10,6 +10,7 @@
       <li><a class="it-sidebar-item" href="{% url 'grant_published' %}"{% if active == 'grant_published' %} aria-current="page"{% endif %}>{% icon "squares-four" %}<span class="it-sidebar-label">Published grants</span></a></li>
       <li><a class="it-sidebar-item" href="{% url 'grant_list' %}"{% if active == 'grant_list' or active == 'grant_applications' or active == 'application_detail' %} aria-current="page"{% endif %}>{% icon "hand-coins" %}<span class="it-sidebar-label">Grants</span></a></li>
       {% if is_org_admin %}<li><a class="it-sidebar-item" href="{% url 'grant_drafts' %}"{% if active == 'grant_drafts' or active == 'grant_create' or active == 'grant_edit' or active == 'template_list' or active == 'category_list' %} aria-current="page"{% endif %}>{% icon "notebook" %}<span class="it-sidebar-label">Drafts</span></a></li>{% endif %}
+      <li><a class="it-sidebar-item" href="{% url 'grant_archive' %}"{% if active == 'grant_archive' %} aria-current="page"{% endif %}>{% icon "archive" %}<span class="it-sidebar-label">Archive</span></a></li>
     </ul>
     <h2 class="it-sidebar-section">Manage</h2>
     <ul class="it-sidebar-list">

@@ -6,6 +6,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.db.models.functions import Coalesce
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -77,7 +78,9 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         )
     )
     applications = list(
-        Application.objects.select_related("grant").annotate(
+        Application.objects.exclude(archive_at__lte=timezone.now())
+        .select_related("grant")
+        .annotate(
             question_count=Count("questions", distinct=True),
             open_questions=Count("questions", filter=Q(questions__answered_at=None), distinct=True),
         )
@@ -122,6 +125,46 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "next_deadline": next_deadline,
             "feed": _feed(),
             **agenda(today, org_deadlines(grants)),
+        },
+    )
+
+
+def archive(request: HttpRequest) -> HttpResponse:
+    applications = Application.objects.filter(archive_at__lte=timezone.now())
+    query = request.GET.get("q", "").strip()
+    if query:
+        applications = applications.filter(
+            Q(answers__project_title__icontains=query)
+            | Q(applicant_name__icontains=query)
+            | Q(grant__title__icontains=query)
+        )
+    outcomes = {ApplicationStatus.APPROVED: "Accepted", ApplicationStatus.REJECTED: "Declined"}
+    counts = dict(applications.order_by().values_list("status").annotate(total=Count("pk")))
+    total = sum(counts.values())
+    current = request.GET.get("status", "")
+    if current in outcomes:
+        applications = applications.filter(status=current)
+    else:
+        current = ""
+    sort = "oldest" if request.GET.get("sort") == "oldest" else "newest"
+    order = "decision_time" if sort == "oldest" else "-decision_time"
+    return render(
+        request,
+        "org/grants/archive.html",
+        {
+            "applications": applications.select_related("grant", "decided_by")
+            .annotate(
+                question_count=Count("questions"),
+                decision_time=Coalesce("decided_at", "archive_at"),
+            )
+            .order_by(order, "pk"),
+            "total": total,
+            "tabs": [(key, label, counts.get(key, 0)) for key, label in outcomes.items()],
+            "current": current,
+            "query": query,
+            "sort": sort,
+            "feed": _feed(),
+            **agenda(timezone.localdate(), org_deadlines(list(Grant.objects.all()))),
         },
     )
 

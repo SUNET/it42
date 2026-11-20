@@ -377,3 +377,19 @@
 .it-draft-new-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--it-black-10); }
 .it-draft-new-icon .it-icon { width: 18px; height: 18px; }
 .it-drafts-links { margin: 24px 0 0; color: var(--it-black-40); font: 400 var(--it-text-14) var(--it-font-sans); }
+
+.it-archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.it-archive-grid .it-app-card { overflow-wrap: anywhere; }
+.it-archive-grid .it-app-card-foot { margin-top: auto; }
+
+.it-archive-filters { flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; background: transparent; }
+.it-archive-filters a { background: var(--it-black-4); color: var(--it-black-100); border-radius: 100px; }
+.it-archive-filters a[aria-current] { background: var(--it-black-100); color: var(--it-white-100); }
+.it-archive-filters a[aria-current] .it-segment-count { color: inherit; }

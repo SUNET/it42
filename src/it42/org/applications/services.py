@@ -8,10 +8,12 @@ wait when the grant's signature deadline has passed.
 """
 
 import logging
-from datetime import date
+from calendar import monthrange
+from datetime import date, datetime
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 from it42.common.outbox import emit
 from it42.common.routing import org_to_core, org_to_ro
@@ -35,7 +37,15 @@ def _check_reviewable(application: Application) -> None:
         )
 
 
-def change_status(application_id: int, status: str) -> Application:
+def archive_time(when: datetime) -> datetime:
+    """One calendar month later in the site's timezone, clamped to the month's last day."""
+    local = timezone.localtime(when, timezone.get_default_timezone())
+    year = local.year + (local.month == 12)
+    month = local.month % 12 + 1
+    return local.replace(year=year, month=month, day=min(local.day, monthrange(year, month)[1]))
+
+
+def change_status(application_id: int, status: str, actor: User) -> Application:
     if status not in ORG_SETTABLE_STATUSES:
         raise ValueError(f"Status {status!r} cannot be set by an org.")
     with transaction.atomic():
@@ -43,9 +53,19 @@ def change_status(application_id: int, status: str) -> Application:
         _check_reviewable(application)
         if application.status == status:
             return application
+        if status in (ApplicationStatus.APPROVED, ApplicationStatus.REJECTED):
+            application.decided_at = timezone.now()
+            application.decided_by = actor
+            application.archive_at = archive_time(application.decided_at)
+        else:
+            application.decided_at = None
+            application.decided_by = None
+            application.archive_at = None
         application.status = status
         seq = application.next_seq()
-        application.save(update_fields=["status", "seq", "updated_at"])
+        application.save(
+            update_fields=["status", "decided_at", "decided_by", "archive_at", "seq", "updated_at"]
+        )
         emit(
             org_to_core(settings.ORG_SLUG),
             "application.status_changed",
