@@ -21,6 +21,7 @@ class ReviewNoteInline(admin.TabularInline):
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
     list_display = ("public_id", "applicant_name", "grant", "status", "seq", "submitted_at")
+    readonly_fields = ("status", "decided_at", "decided_by", "archive_at")
     list_filter = ("status", "grant")
     search_fields = ("public_id", "applicant_subject", "applicant_name")
     inlines = [DocumentInline, QuestionInline, ReviewNoteInline]

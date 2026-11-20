@@ -28,6 +28,11 @@
         {% if application.research_org %}<div><dt>Organisation</dt><dd data-research-org>{% icon "buildings" %}{{ application.research_org|research_org_name }}</dd></div>{% endif %}
         <div><dt>Submitted</dt><dd>{{ application.submitted_at|date:"j M Y, H:i" }}</dd></div>
         <div><dt>Status</dt><dd><span data-status="{{ application.status }}">{% status_pill application.status %}</span></dd></div>
+        {% if application.archive_at %}
+        <div><dt>Decision by</dt><dd>{{ application.decided_by|default:"Not recorded" }}</dd></div>
+        <div><dt>Decision date</dt><dd>{{ application.decided_at|date:"j M Y, H:i"|default:"Not recorded" }}</dd></div>
+        <div><dt>Archive date</dt><dd>{{ application.archive_at|date:"j M Y, H:i" }}</dd></div>
+        {% endif %}
         <div><dt>Reviewers</dt><dd>{% if assigned %}<span class="it-tag-soft">{{ assigned }} assigned · {{ summary.submitted }} of {{ assigned }} in</span>{% else %}<span class="it-tag-soft">Not assigned yet</span>{% endif %}</dd></div>
       </dl>
     </div>
@@ -39,7 +44,7 @@
         {% for value, label in statuses %}<option value="{{ value }}"{% if value == application.status %} selected{% endif %}>{{ label }}</option>{% endfor %}
       </select>
       <button class="btn btn-primary" type="submit">Update</button>
-      <p class="it-draft-meta">The applicant sees status changes and questions.</p>
+      <p class="it-draft-meta">Funding-organisation staff and admins can record the decision. The applicant sees status changes and questions.</p>
     </form>
     {% endif %}
   </aside>

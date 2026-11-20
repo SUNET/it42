@@ -113,7 +113,8 @@ def _steps(application: Application, assigned: int) -> tuple[int, list[dict[str,
 
 def detail(request: HttpRequest, application_id: int) -> HttpResponse:
     application = get_object_or_404(
-        Application.objects.select_related("grant", "grant__created_by"), pk=application_id
+        Application.objects.select_related("grant", "grant__created_by", "decided_by"),
+        pk=application_id,
     )
     assigned = Assignment.objects.filter(application=application).count()
     stage, steps = _steps(application, assigned)
@@ -157,7 +158,9 @@ def download(request: HttpRequest, application_id: int, document_id: int) -> Fil
 def set_status(request: HttpRequest, application_id: int) -> HttpResponse:
     get_object_or_404(Application, pk=application_id)
     try:
-        application = services.change_status(application_id, request.POST.get("status", ""))
+        application = services.change_status(
+            application_id, request.POST.get("status", ""), _user(request)
+        )
     except ValueError as exc:
         messages.error(request, str(exc))
     else:

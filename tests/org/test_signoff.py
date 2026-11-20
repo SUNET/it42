@@ -245,7 +245,7 @@ def test_unsigned_applications_cannot_be_reviewed(
     waiting: Application, make_user: Callable[..., Any], admin_client: Client
 ) -> None:
     with pytest.raises(services.NotReviewable):
-        services.change_status(waiting.pk, "under_review")
+        services.change_status(waiting.pk, "under_review", make_user("member"))
     with pytest.raises(services.NotReviewable):
         services.ask_question(waiting.pk, make_user("staff2"), "Why?")
     panel = Panel.objects.create(name="P", created_by=make_user("chair"))
