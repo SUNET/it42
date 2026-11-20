@@ -13,7 +13,7 @@ from it42.common.inbox import process
 from it42.common.models import OutboxEvent
 from it42.common.routing import inbound_queues, sender_of
 from it42.ro.signing.models import RequestDocument, SignatureRequest
-from tests.board_browser import board_browser
+from tests.board_browser import board_browser, check_unsaved_card_text
 
 from .conftest import PDF, requested
 
@@ -192,3 +192,19 @@ def test_signer_opens_request_over_board(kth_signer, kth_request) -> None:
         page.get_by_role("button", name="Close card").click()
         dialog.wait_for(state="hidden")
         assert page.get_by_role("heading", name="Applications from your researchers").is_visible()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("field_name", ["comment", "reason"])
+def test_signature_card_protects_unsaved_text(kth_signer, kth_request, field_name) -> None:
+    with board_browser(kth_signer) as page:
+        page.goto("/")
+        page.locator("a[data-board-card]").click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        if field_name == "reason":
+            frame.get_by_text("Decline instead", exact=True).click()
+        field = frame.locator(f'textarea[name="{field_name}"]')
+        close = page.get_by_role("button", name="Close card")
+        check_unsaved_card_text(page, field, close.click)
+    kth_request.refresh_from_db()
+    assert kth_request.status == "pending"

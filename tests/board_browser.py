@@ -1,7 +1,7 @@
 """Chrome checks for board cards. Run with `uv run --with playwright python -m pytest`."""
 
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -35,3 +35,16 @@ def board_browser(client: Client) -> Iterator[Any]:
         finally:
             browser.close()
             server.stop()
+
+
+def check_unsaved_card_text(page: Any, field: Any, dismiss_card: Callable[[], None]) -> None:
+    """Cancelling dismissal preserves the edit, and confirming discards it."""
+    field.fill("Work in progress")
+    page.once("dialog", lambda prompt: prompt.dismiss())
+    dismiss_card()
+    card = page.get_by_role("dialog")
+    assert card.is_visible()
+    assert field.input_value() == "Work in progress"
+    page.once("dialog", lambda prompt: prompt.accept())
+    dismiss_card()
+    card.wait_for(state="hidden")

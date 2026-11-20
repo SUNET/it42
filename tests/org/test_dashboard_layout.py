@@ -8,7 +8,7 @@ from django.conf import settings
 from django.test import Client
 
 from it42.org.grants.models import Grant
-from tests.board_browser import board_browser
+from tests.board_browser import board_browser, check_unsaved_card_text
 
 
 @pytest.mark.parametrize("size", ["1440,900", "600,640"])
@@ -131,6 +131,21 @@ def test_application_opens_over_the_board(
             link.press("Enter")
             frame.get_by_role("tab", name="Proposal").press("Escape")
             dialog.wait_for(state="hidden")
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("tab", "label"), [("Questions", "Ask a question"), ("Activity", "Internal note")]
+)
+def test_granter_card_protects_unsaved_text(admin_client, make_application, tab, label) -> None:
+    application = make_application()
+    with board_browser(admin_client) as page:
+        page.goto("/")
+        page.get_by_role("link", name=application.applicant_name, exact=True).first.click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        frame.get_by_role("tab", name=tab).click()
+        field = frame.get_by_role("textbox", name=label)
+        check_unsaved_card_text(page, field, lambda: page.mouse.click(2, 2))
 
 
 @pytest.mark.django_db(transaction=True)
