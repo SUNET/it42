@@ -69,6 +69,11 @@ def test_org_permissions_are_limited_to_own_queues(definitions: dict) -> None:
         assert not can(definitions, "o1", "read", forbidden)
 
 
+@pytest.mark.parametrize("org", ["o1", "o2", "o3"])
+def test_orgs_cannot_publish_ro_decisions(definitions: dict, org: str) -> None:
+    assert not can(definitions, org, "write", "ro-to-core")
+
+
 def test_ro_permissions_reach_only_the_orgs_and_core_decision_flow(definitions: dict) -> None:
     for org in ("o1", "o2", "o3", "o4", "o5"):
         assert can(definitions, "ro", "write", f"ro-to-{org}")

@@ -1,5 +1,6 @@
 """The applicant's side of the administrating organisation's sign-off (milestone 14)."""
 
+import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -11,7 +12,7 @@ from it42.common.events import Envelope, RejectEvent
 from it42.common.formschema import BASE_FIELDS
 from it42.common.inbox import process
 from it42.common.models import OutboxEvent
-from it42.core.applications.models import ApplicationCopy
+from it42.core.applications.models import ApplicationCopy, QuestionCopy
 from it42.core.catalog.models import PublicGrant
 
 SCHEMA = [
@@ -289,5 +290,53 @@ def test_a_fast_ro_decision_cannot_be_reverted_by_the_org_acknowledgement(
 def test_application_received_cannot_bypass_the_ro_decision(application: ApplicationCopy) -> None:
     with pytest.raises(RejectEvent, match="first event"):
         process(event(application, "application.received", 2), "o1-to-core")
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("awaiting_signature", 1)
+
+
+def test_review_status_is_rejected_before_org_acknowledgement(
+    u2_client: Client, grant: PublicGrant
+) -> None:
+    apply(u2_client, grant, **ANSWERS)
+    application = ApplicationCopy.objects.get()
+
+    with pytest.raises(RejectEvent, match="has not been signed"):
+        process(
+            event(application, "application.status_changed", 1, status="approved"),
+            "o1-to-core",
+        )
+
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("submitted", 0)
+    process(event(application, "application.received", 1, awaiting_signature=True), "o1-to-core")
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("awaiting_signature", 1)
+
+
+def test_question_is_rejected_before_org_acknowledgement(
+    u2_client: Client, grant: PublicGrant
+) -> None:
+    apply(u2_client, grant, **ANSWERS)
+    application = ApplicationCopy.objects.get()
+    question_id = uuid.uuid4()
+    question = Envelope(
+        type="question.asked",
+        payload={
+            "application_id": str(application.public_id),
+            "seq": 1,
+            "question_id": str(question_id),
+            "text": "Unsigned question",
+        },
+        application_id=application.public_id,
+        seq=1,
+    ).to_json()
+
+    with pytest.raises(RejectEvent, match="has not been signed"):
+        process(question, "o1-to-core")
+
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("submitted", 0)
+    assert not QuestionCopy.objects.filter(question_public_id=question_id).exists()
+    process(event(application, "application.received", 1, awaiting_signature=True), "o1-to-core")
     application.refresh_from_db()
     assert (application.status, application.last_seq) == ("awaiting_signature", 1)

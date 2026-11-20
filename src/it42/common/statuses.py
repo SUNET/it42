@@ -39,6 +39,7 @@ SIGNING_OUTCOMES = (
 
 # Not (yet) open for review: no status changes, questions or panel work.
 NOT_REVIEWABLE = (
+    ApplicationStatus.SUBMITTED,
     ApplicationStatus.AWAITING_SIGNATURE,
     ApplicationStatus.RO_DECLINED,
     ApplicationStatus.RO_EXPIRED,

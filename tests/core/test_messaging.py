@@ -109,6 +109,14 @@ def test_ping_is_answered_through_the_outbox() -> None:
     assert (reply.exchange, reply.type) == ("core-to-o2", "system.pong")
 
 
+@pytest.mark.django_db
+def test_ping_on_the_one_way_ro_route_is_rejected_without_a_reply() -> None:
+    with pytest.raises(RejectEvent, match="one-way"):
+        process(body(type="system.ping"), "ro-to-core")
+    assert not OutboxEvent.objects.exists()
+    assert not ProcessedEvent.objects.exists()
+
+
 class FakeChannel:
     def __init__(self, fail_on: int | None = None) -> None:
         self.published: list[dict[str, Any]] = []

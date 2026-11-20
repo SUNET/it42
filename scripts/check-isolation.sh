@@ -115,7 +115,7 @@ for zone in core o1 o2 o1-review o2-review ro; do
 done
 
 section "3. RabbitMQ permissions"
-for org in o1 o2; do
+for org in o1 o2 o3; do
     while read -r name result; do
         case "$name" in
             *) if [[ "$result" == 403\ ACCESS_REFUSED* ]]; then
