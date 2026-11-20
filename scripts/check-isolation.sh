@@ -12,7 +12,8 @@
 #      Org 2 application) is dead-lettered and changes nothing.
 #   5. The core database contains no review-note text.
 #   6. A signature.granted the RO zone sends to Org 2 about an Org 1 application is
-#      dead-lettered and changes nothing; signers' comments never reach the core.
+#      dead-lettered and changes nothing; signers' comments reach only core's relay
+#      outbox, not its applicant-domain state.
 #
 # Checks 4-6 need demo data (a2's applications, review notes, a signed application);
 # run `uv run python scripts/acceptance.py` first, or they are reported as SKIP.
@@ -261,15 +262,19 @@ print(f'{a.status} {a.seq}')")
     if [ -z "${comments//[[:space:]]/}" ]; then
         skp "no signer comments exist yet"
     else
-        dump=$(dc exec -T core-db pg_dump -U core core)
+        # Core relays the RO event to the funding organisation through its transactional
+        # outbox. The comment is expected there until delivery, but must not be copied to
+        # applicant-domain tables. Exclude only outbox row data from this isolation check.
+        dump=$(dc exec -T core-db pg_dump -U core \
+            --exclude-table-data=public.common_outboxevent core)
         leaked=0
         while IFS= read -r comment; do
             [ -n "$comment" ] && grep -qF -- "$comment" <<<"$dump" && leaked=$((leaked + 1))
         done <<<"$comments"
         if [ "$leaked" = 0 ]; then
-            ok "no signer comment appears in a dump of the core database"
+            ok "no signer comment appears in core applicant-domain data"
         else
-            bad "$leaked signer comment(s) found in the core database"
+            bad "$leaked signer comment(s) found in core applicant-domain data"
         fi
     fi
 fi

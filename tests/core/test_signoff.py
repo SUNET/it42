@@ -126,6 +126,7 @@ def test_signed_application_shows_the_signer(
     assert relayed.payload["comment"] == "Fine by us."
     body = u2_client.get(f"/my/applications/{application.public_id}/").content.decode()
     assert "Signed by Nils Hedlund for KTH Royal Institute of Technology" in body
+    assert "Fine by us." not in body
 
 
 def test_a_signature_for_another_organisation_is_rejected(application: ApplicationCopy) -> None:
