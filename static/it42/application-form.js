@@ -57,8 +57,9 @@
     link.href = next ? "#" + next.id : "#application-form";
   }
   function changed(event) {
-    if (leaving || event.target.closest("dialog") || event.target.name === "confirm") return;
+    if (event.target.closest("dialog") || event.target.name === "confirm") return;
     revision++;
+    if (leaving) return; // The final POST will include edits made while it waits for autosave.
     progress();
     status("Unsaved changes");
     clearTimeout(timer);
@@ -100,9 +101,9 @@
     if (inFlight) await inFlight;
     form.requestSubmit(button);
   });
-  // Both page navigation and closing an embedded editor must protect unsaved work.
+  // A pending final POST can navigate, but removing its frame would cancel that POST.
   function guardUnsaved(event) {
-    if (!leaving && savedRevision < revision) {
+    if (savedRevision < revision && (event.type === "it42-card-dismiss" || !leaving)) {
       event.preventDefault();
       if (event.type === "beforeunload") event.returnValue = "";
     }

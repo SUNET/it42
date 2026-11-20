@@ -496,3 +496,34 @@ def test_reviewer_opens_panel_over_board(make_panel, make_seat, seat_client) -> 
         page.get_by_role("button", name="Close card").click()
         dialog.wait_for(state="hidden")
         assert page.get_by_role("heading", name="My review panels").is_visible()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", [PanelTask.Kind.ASSESSMENT, PanelTask.Kind.FINAL])
+def test_review_card_protects_unsaved_text(
+    kind, make_grant, make_panel, make_application, make_seat, assign, make_task, seat_client
+) -> None:
+    s = _setup(make_grant, make_panel, make_application, make_seat, assign)
+    panel = s["panel"]
+    final = kind == PanelTask.Kind.FINAL
+    if final:
+        make_task(panel, PanelTask.Kind.ASSESSMENT, ended=True)
+    make_task(panel, kind)
+    with board_browser(seat_client(s["chair" if final else "reviewer"])) as page:
+        page.goto(f"/panels/{panel.pk}/")
+        page.locator(f'a[data-board-card][href="{s["url"]}"]').last.click()
+        dialog = page.get_by_role("dialog")
+        frame = dialog.frame_locator("iframe")
+        if final:
+            frame.get_by_role("tab", name="Final statement").click()
+        section = "#final-statement" if final else "#assessment"
+        field = frame.locator(f"{section} textarea").first
+        original = field.input_value()
+        field.fill("Work in progress")
+        page.once("dialog", lambda prompt: prompt.dismiss())
+        page.mouse.click(2, 2)
+        assert dialog.is_visible()
+        assert field.input_value() == "Work in progress"
+        field.fill(original)
+        field.press("Escape")
+        dialog.wait_for(state="hidden")

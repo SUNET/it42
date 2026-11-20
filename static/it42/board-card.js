@@ -16,6 +16,15 @@
       link.href = cardUrl(link.href).href;
       link.target = "_self";
     });
+    // These review forms save on POST. Compare their current text and grades with the
+    // server-rendered values so an untouched form (or a reverted edit) closes quietly.
+    document.querySelectorAll("form[data-guard-card-edits]").forEach(form => {
+      const values = () => new URLSearchParams(new FormData(form)).toString();
+      const initial = values();
+      document.addEventListener("it42-card-dismiss", event => {
+        if (values() !== initial) event.preventDefault();
+      });
+    });
     return;
   }
 

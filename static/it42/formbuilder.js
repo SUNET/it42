@@ -898,8 +898,9 @@
       closeAddMenu();
     }
   });
-  addMenu.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !event.defaultPrevented && !addMenu.hidden) {
+      event.preventDefault(); // Keep the enclosing card open when dismissing the menu.
       closeAddMenu();
       addToggle.focus();
     }

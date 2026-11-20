@@ -131,3 +131,21 @@ def test_application_opens_over_the_board(
             link.press("Enter")
             frame.get_by_role("tab", name="Proposal").press("Escape")
             dialog.wait_for(state="hidden")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_escape_closes_field_menu_before_card(admin_client, make_grant) -> None:
+    grant = make_grant("Editable grant", status=Grant.Status.DRAFT)
+    with board_browser(admin_client) as page:
+        page.goto("/")
+        page.get_by_role("link", name=grant.title, exact=True).click()
+        dialog = page.get_by_role("dialog")
+        frame = dialog.frame_locator("iframe")
+        toggle = frame.locator("[data-add-toggle]")
+        toggle.click()
+        frame.locator("[data-add-menu] button").first.press("Escape")
+        assert dialog.is_visible()
+        assert toggle.get_attribute("aria-expanded") == "false"
+        assert toggle.evaluate("(el) => el === document.activeElement")
+        toggle.press("Escape")
+        dialog.wait_for(state="hidden")
