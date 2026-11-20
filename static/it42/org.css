@@ -27,7 +27,7 @@
 .it-app .form-check-input:checked { background-color: var(--it-midnight); border-color: var(--it-midnight); }
 
 /* Sidebar: the org under the logo, panels as sub items */
-.it-org-name { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; padding: 4px 8px; color: var(--it-black-80); font: 600 var(--it-text-14) var(--it-font-sans); }
+.it-org-name { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; padding: 4px 8px; overflow-wrap: anywhere; color: var(--it-black-80); font: 600 var(--it-text-14) var(--it-font-sans); }
 .it-org-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--it-org-color, var(--it-black-20)); flex: none; }
 .it-sidebar-sub { padding-left: 36px; }
 .it-sub-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--it-black-20); flex: none; }
@@ -49,7 +49,6 @@
 .it-person { display: flex; align-items: center; gap: 8px; font: 400 var(--it-text-12) var(--it-font-sans); }
 
 /* Right panel: calendar and deadlines */
-.it-panel { width: 300px; }
 .it-panel-sub { color: var(--it-black-40); font-weight: 400 !important; font-size: 12px !important; }
 .it-cal { width: 100%; border-collapse: collapse; table-layout: fixed; text-align: center; font: 400 var(--it-text-12) var(--it-font-sans); }
 .it-cal caption { caption-side: top; padding: 0 4px 8px; color: var(--it-black-100); font: 600 var(--it-text-14) var(--it-font-sans); text-align: left; }

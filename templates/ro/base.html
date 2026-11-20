@@ -11,12 +11,12 @@ organisation's name (from the directory) sits under the logo.
   {% if membership %}
     <h2 class="it-sidebar-section">Sign-off</h2>
     <ul class="it-sidebar-list">
-      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' or active == 'request_detail' %} aria-current="page"{% endif %}>{% icon "kanban" %}Board</a></li>
+      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' or active == 'request_detail' %} aria-current="page"{% endif %}>{% icon "kanban" %}<span class="it-sidebar-label">Board</span></a></li>
     </ul>
     {% if is_ro_admin %}
     <h2 class="it-sidebar-section">Manage</h2>
     <ul class="it-sidebar-list">
-      <li><a class="it-sidebar-item" href="{% url 'people' %}"{% if active == 'people' %} aria-current="page"{% endif %}>{% icon "user-list" %}People</a></li>
+      <li><a class="it-sidebar-item" href="{% url 'people' %}"{% if active == 'people' %} aria-current="page"{% endif %}>{% icon "user-list" %}<span class="it-sidebar-label">People</span></a></li>
     </ul>
     {% endif %}
   {% endif %}

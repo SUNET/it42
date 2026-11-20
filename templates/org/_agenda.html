@@ -1,6 +1,6 @@
 {# Calendar and upcoming deadlines for the right panel; expects the context of common.agenda.agenda(). #}
 <section aria-labelledby="calendar-title">
-  <h2 id="calendar-title">Calendar</h2>
+  <h2 id="calendar-title" tabindex="-1">Calendar</h2>
   <table class="it-cal">
     <caption>{{ month|date:"F Y" }}</caption>
     <thead><tr>{% for d in weekdays %}<th scope="col">{{ d }}</th>{% endfor %}</tr></thead>

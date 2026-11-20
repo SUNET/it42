@@ -1,0 +1,5 @@
+{% load static it42 %}
+<div class="it-sidebar-brand">
+  <a class="it-logo" href="{% url 'home' %}" aria-label="IT42 home"><img src="{% static 'it42/logo.svg' %}" alt="" width="20" height="24"><span>IT42</span></a>
+  <button type="button" class="it-panel-toggle" aria-label="Collapse menu" hidden>{% icon "sidebar-simple" %}</button>
+</div>

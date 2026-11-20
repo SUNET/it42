@@ -57,8 +57,9 @@
 {% endblock %}
 {% block panel %}
 <aside class="it-panel" aria-label="Notifications and calendar">
+  {% include "includes/panel_controls.html" with notifications=True calendar=True only %}
   <section>
-    <h2>Notifications</h2>
+    <h2 id="feed-title" tabindex="-1">Notifications</h2>
     <ul class="it-notes">
       {% for note in feed %}
         <li><span class="it-note-icon">{% icon note.icon %}</span><div><a href="{% url 'request_detail' note.request.pk %}">{{ note.text }}</a><time datetime="{{ note.when|date:'c' }}">{{ note.when|timesince }} ago</time></div></li>

@@ -6,15 +6,15 @@
   {% if is_member %}
     <h2 class="it-sidebar-section">Grants</h2>
     <ul class="it-sidebar-list">
-      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' %} aria-current="page"{% endif %}>{% icon "kanban" %}Board</a></li>
-      <li><a class="it-sidebar-item" href="{% url 'grant_published' %}"{% if active == 'grant_published' %} aria-current="page"{% endif %}>{% icon "squares-four" %}Published grants</a></li>
-      <li><a class="it-sidebar-item" href="{% url 'grant_list' %}"{% if active == 'grant_list' or active == 'grant_applications' or active == 'application_detail' %} aria-current="page"{% endif %}>{% icon "hand-coins" %}Grants</a></li>
-      {% if is_org_admin %}<li><a class="it-sidebar-item" href="{% url 'grant_drafts' %}"{% if active == 'grant_drafts' or active == 'grant_create' or active == 'grant_edit' or active == 'template_list' or active == 'category_list' %} aria-current="page"{% endif %}>{% icon "notebook" %}Drafts</a></li>{% endif %}
+      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' %} aria-current="page"{% endif %}>{% icon "kanban" %}<span class="it-sidebar-label">Board</span></a></li>
+      <li><a class="it-sidebar-item" href="{% url 'grant_published' %}"{% if active == 'grant_published' %} aria-current="page"{% endif %}>{% icon "squares-four" %}<span class="it-sidebar-label">Published grants</span></a></li>
+      <li><a class="it-sidebar-item" href="{% url 'grant_list' %}"{% if active == 'grant_list' or active == 'grant_applications' or active == 'application_detail' %} aria-current="page"{% endif %}>{% icon "hand-coins" %}<span class="it-sidebar-label">Grants</span></a></li>
+      {% if is_org_admin %}<li><a class="it-sidebar-item" href="{% url 'grant_drafts' %}"{% if active == 'grant_drafts' or active == 'grant_create' or active == 'grant_edit' or active == 'template_list' or active == 'category_list' %} aria-current="page"{% endif %}>{% icon "notebook" %}<span class="it-sidebar-label">Drafts</span></a></li>{% endif %}
     </ul>
     <h2 class="it-sidebar-section">Manage</h2>
     <ul class="it-sidebar-list">
-      <li><a class="it-sidebar-item" href="{% url 'panel_list' %}"{% if request.path|slice:":8" == "/review/" %} aria-current="page"{% endif %}>{% icon "users-three" %}Review panels</a></li>
-      {% if is_org_admin %}<li><a class="it-sidebar-item" href="{% url 'members' %}"{% if active == 'members' %} aria-current="page"{% endif %}>{% icon "user-list" %}Members</a></li>{% endif %}
+      <li><a class="it-sidebar-item" href="{% url 'panel_list' %}"{% if request.path|slice:":8" == "/review/" %} aria-current="page"{% endif %}>{% icon "users-three" %}<span class="it-sidebar-label">Review panels</span></a></li>
+      {% if is_org_admin %}<li><a class="it-sidebar-item" href="{% url 'members' %}"{% if active == 'members' %} aria-current="page"{% endif %}>{% icon "user-list" %}<span class="it-sidebar-label">Members</span></a></li>{% endif %}
     </ul>
   {% endif %}
 {% endblock %}
