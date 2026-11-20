@@ -16,7 +16,7 @@ Blocks: ``role`` (granter or reviewer), ``role_name``, ``sidebar`` (nav sections
 <div class="it-app">
   <aside class="it-sidebar" aria-label="Site menu">
     <div class="it-sidebar-head">
-      <a class="it-logo" href="{% url 'home' %}"><img src="{% static 'it42/logo.svg' %}" alt="" width="20" height="24"><span>IT42</span></a>
+      {% include "includes/sidebar_brand.html" %}
       <span class="it-role-tag"><span class="it-role-dot" aria-hidden="true"></span>{% block role_name %}{% endblock %}</span>
     </div>
     <p class="it-org-name"><span class="it-org-dot" aria-hidden="true"></span>{{ ORG_NAME }}</p>
@@ -29,7 +29,7 @@ Blocks: ``role`` (granter or reviewer), ``role_name``, ``sidebar`` (nav sections
         {% block account_items %}{% endblock %}
         <li>
           <form method="post" action="{% url 'logout' %}">{% csrf_token %}
-            <button class="it-sidebar-item" type="submit">{% icon "sign-out" %}Log out</button>
+            <button class="it-sidebar-item" type="submit">{% icon "sign-out" %}<span class="it-sidebar-label">Log out</span></button>
           </form>
         </li>
       </ul>
@@ -55,4 +55,5 @@ Blocks: ``role`` (granter or reviewer), ``role_name``, ``sidebar`` (nav sections
   </div>
   {% block panel %}{% endblock %}
 </div>
+<script src="{% static 'it42/panels.js' %}"></script>
 {% endblock body %}

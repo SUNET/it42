@@ -21,6 +21,7 @@
 {% endblock %}
 {% block panel %}
 <aside class="it-panel" aria-label="Calendar">
+  {% include "includes/panel_controls.html" with calendar=True only %}
   {% include "org/_agenda.html" %}
 </aside>
 {% endblock %}

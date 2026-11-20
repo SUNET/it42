@@ -13,26 +13,26 @@ overlay is open).
 <div class="it-app"{% block app_attrs %}{% endblock %}>
   <aside class="it-sidebar" aria-label="Applicant menu">
     <div class="it-sidebar-head">
-      <a class="it-logo" href="{% url 'home' %}"><img src="{% static 'it42/logo.svg' %}" alt="" width="20" height="24"><span>IT42</span></a>
+      {% include "includes/sidebar_brand.html" %}
       <span class="it-role-tag"><span class="it-role-dot" aria-hidden="true"></span>Applicant</span>
     </div>
     {% with active=request.resolver_match.url_name %}
     <nav>
       <h2 class="it-sidebar-section">Open calls</h2>
       <ul class="it-sidebar-list">
-        <li><a class="it-sidebar-item" href="{% url 'calls' %}">{% icon "storefront" %}Open calls</a></li>
+        <li><a class="it-sidebar-item" href="{% url 'calls' %}">{% icon "storefront" %}<span class="it-sidebar-label">Open calls</span></a></li>
       </ul>
       <h2 class="it-sidebar-section">Grants</h2>
       <ul class="it-sidebar-list">
-        <li><a class="it-sidebar-item" href="{% url 'my_applications' %}"{% if active == 'my_applications' or active == 'my_application' or active == 'apply' %} aria-current="page"{% endif %}>{% icon "kanban" %}Board</a></li>
+        <li><a class="it-sidebar-item" href="{% url 'my_applications' %}"{% if active == 'my_applications' or active == 'my_application' or active == 'apply' %} aria-current="page"{% endif %}>{% icon "kanban" %}<span class="it-sidebar-label">Board</span></a></li>
       </ul>
       <h2 class="it-sidebar-section">Account</h2>
       <ul class="it-sidebar-list">
-        <li><a class="it-sidebar-item" href="{% url 'profile' %}"{% if active == 'profile' or active|slice:':8' == 'profile_' or active|slice:':3' == 'cv_' or active|slice:':6' == 'orcid_' %} aria-current="page"{% endif %}>{% icon "user-circle" %}Profile</a></li>
-        <li><a class="it-sidebar-item" href="{% url 'text_page' 'help' %}">{% icon "question" %}Help</a></li>
+        <li><a class="it-sidebar-item" href="{% url 'profile' %}"{% if active == 'profile' or active|slice:':8' == 'profile_' or active|slice:':3' == 'cv_' or active|slice:':6' == 'orcid_' %} aria-current="page"{% endif %}>{% icon "user-circle" %}<span class="it-sidebar-label">Profile</span></a></li>
+        <li><a class="it-sidebar-item" href="{% url 'text_page' 'help' %}">{% icon "question" %}<span class="it-sidebar-label">Help</span></a></li>
         <li>
           <form method="post" action="{% url 'logout' %}">{% csrf_token %}
-            <button class="it-sidebar-item" type="submit">{% icon "sign-out" %}Log out</button>
+            <button class="it-sidebar-item" type="submit">{% icon "sign-out" %}<span class="it-sidebar-label">Log out</span></button>
           </form>
         </li>
       </ul>
@@ -60,4 +60,5 @@ overlay is open).
   </div>
   {% block panel %}{% endblock %}
 </div>
+<script src="{% static 'it42/panels.js' %}"></script>
 {% endblock body %}

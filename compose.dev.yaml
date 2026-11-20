@@ -1,0 +1,35 @@
+# Opt-in local development only: docker compose -f compose.yaml -f compose.dev.yaml up -d
+# Mount targets merge with the base service volumes, preserving keys, media and config.
+x-live-ui: &live-ui
+  environment:
+    TEMPLATES_LIVE: "1"
+    STATICFILES_LIVE: "1"
+  volumes:
+    - ./templates:/app/templates:ro
+    - ./static:/app/staticfiles:ro
+
+services:
+  core-web:
+    <<: *live-ui
+  o1-web:
+    <<: *live-ui
+  o1-review-web:
+    <<: *live-ui
+  o2-web:
+    <<: *live-ui
+  o2-review-web:
+    <<: *live-ui
+  o3-web:
+    <<: *live-ui
+  o3-review-web:
+    <<: *live-ui
+  o4-web:
+    <<: *live-ui
+  o4-review-web:
+    <<: *live-ui
+  o5-web:
+    <<: *live-ui
+  o5-review-web:
+    <<: *live-ui
+  ro-web:
+    <<: *live-ui

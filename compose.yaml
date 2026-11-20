@@ -7,10 +7,8 @@ x-web: &web
   image: it42-app:dev
   command: ["web"]
   restart: unless-stopped
-  # templates/ is bind-mounted below (read-only) and read without caching, so template
-  # edits are live; src/ and static/ changes still need a rebuild.
+  # Live template and static mounts are opt-in through compose.dev.yaml.
   environment:
-    TEMPLATES_LIVE: "1"
     IT42_DOMAIN: ${IT42_DOMAIN:-it42.vr}
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
@@ -187,7 +185,6 @@ services:
       - core_media:/app/media
       - ./secrets/saml/core:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, core_net]
 
@@ -224,7 +221,6 @@ services:
       - o1_media:/app/media
       - ./secrets/saml/o1:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o1_net]
 
@@ -249,7 +245,6 @@ services:
       - o1_media:/app/media
       - ./secrets/saml/o1-review:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o1_net]
 
@@ -261,7 +256,6 @@ services:
       - o2_media:/app/media
       - ./secrets/saml/o2:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o2_net]
 
@@ -286,7 +280,6 @@ services:
       - o2_media:/app/media
       - ./secrets/saml/o2-review:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o2_net]
 
@@ -298,7 +291,6 @@ services:
       - o3_media:/app/media
       - ./secrets/saml/o3:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o3_net]
 
@@ -323,7 +315,6 @@ services:
       - o3_media:/app/media
       - ./secrets/saml/o3-review:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o3_net]
 
@@ -335,7 +326,6 @@ services:
       - o4_media:/app/media
       - ./secrets/saml/o4:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o4_net]
 
@@ -360,7 +350,6 @@ services:
       - o4_media:/app/media
       - ./secrets/saml/o4-review:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o4_net]
 
@@ -372,7 +361,6 @@ services:
       - o5_media:/app/media
       - ./secrets/saml/o5:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o5_net]
 
@@ -397,7 +385,6 @@ services:
       - o5_media:/app/media
       - ./secrets/saml/o5-review:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, o5_net]
 
@@ -412,7 +399,6 @@ services:
       - ro_media:/app/media
       - ./secrets/saml/ro:/run/secrets/saml:ro
       - ./secrets/saml/idp/metadata.xml:/run/secrets/idp/metadata.xml:ro
-      - ./templates:/app/templates:ro
       - *directory
     networks: [edge, ro_net]
 

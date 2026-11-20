@@ -6,13 +6,13 @@
   {% if seats %}
     <h2 class="it-sidebar-section">Reviews</h2>
     <ul class="it-sidebar-list">
-      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' %} aria-current="page"{% endif %}>{% icon "kanban" %}My panels</a></li>
+      <li><a class="it-sidebar-item" href="{% url 'home' %}"{% if active == 'home' %} aria-current="page"{% endif %}>{% icon "kanban" %}<span class="it-sidebar-label">My panels</span></a></li>
       {% for s in seats %}
-        <li><a class="it-sidebar-item it-sidebar-sub" href="{% url 'review_panel' s.panel_id %}"{% if panel.pk == s.panel_id %} aria-current="page"{% endif %}><span class="it-sub-dot" aria-hidden="true"></span>{{ s.panel.name }}</a></li>
+        <li><a class="it-sidebar-item it-sidebar-sub" href="{% url 'review_panel' s.panel_id %}"{% if panel.pk == s.panel_id %} aria-current="page"{% endif %}><span class="it-sub-dot" aria-hidden="true"></span><span class="it-sidebar-label">{{ s.panel.name }}</span></a></li>
       {% endfor %}
     </ul>
   {% endif %}
 {% endblock %}
 {% block account_items %}
-  {% if seats %}<li><a class="it-sidebar-item" href="{% url 'review_profile' %}"{% if active == 'review_profile' %} aria-current="page"{% endif %}>{% icon "user-circle" %}My profile</a></li>{% endif %}
+  {% if seats %}<li><a class="it-sidebar-item" href="{% url 'review_profile' %}"{% if active == 'review_profile' %} aria-current="page"{% endif %}>{% icon "user-circle" %}<span class="it-sidebar-label">My profile</span></a></li>{% endif %}
 {% endblock %}

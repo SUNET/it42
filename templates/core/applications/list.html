@@ -18,7 +18,7 @@
   </div>
 </div>
 
-<div class="it-board">
+<div class="it-board" tabindex="0" role="region" aria-label="Application board">
   {% for column in columns %}
     <section class="it-column{% if column.key == 'decision' %} it-column-done{% endif %}" aria-labelledby="col-{{ column.key }}">
       <div class="it-column-head">
@@ -90,9 +90,10 @@
 </div>
 {% endblock %}
 {% block panel %}
-<aside class="it-panel" aria-labelledby="feed-title">
+<aside class="it-panel" aria-label="Notifications">
+  {% include "includes/panel_controls.html" with notifications=True only %}
   <section>
-    <h2 id="feed-title">Notifications</h2>
+    <h2 id="feed-title" tabindex="-1">Notifications</h2>
     <ul class="it-notes">
       {% for note in feed %}
         <li><span class="it-note-icon">{% icon note.icon %}</span><div><a href="{% url 'my_application' note.application.public_id %}">{{ note.text }}</a><time datetime="{{ note.when|date:'c' }}">{{ note.when|timesince }} ago</time></div></li>

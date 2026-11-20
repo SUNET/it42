@@ -84,7 +84,7 @@ CONTEXT_PROCESSORS = [
 ]
 
 
-# compose bind-mounts templates/ into the web containers; TEMPLATES_LIVE drops the
+# compose.dev.yaml bind-mounts templates/; TEMPLATES_LIVE drops the
 # cached loader so an edited template shows on the next request, without a restart.
 TEMPLATES_LIVE = env_bool("TEMPLATES_LIVE")
 
@@ -152,6 +152,13 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+# Local development mounts static/ over STATIC_ROOT. Read each request from disk
+# and use unhashed URLs so edits do not require collectstatic or a container restart.
+if env_bool("STATICFILES_LIVE"):
+    STORAGES["staticfiles"] = {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}
+    WHITENOISE_AUTOREFRESH = True
+    WHITENOISE_MAX_AGE = 0
+
 MEDIA_ROOT = Path(env("MEDIA_ROOT", str(BASE_DIR / "media")))
 MEDIA_URL = "/media/"
 # Uploaded PDFs are limited to 5 MB; leave headroom for the multipart envelope.

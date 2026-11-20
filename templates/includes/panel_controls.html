@@ -1,0 +1,6 @@
+{% load it42 %}
+<button type="button" class="it-panel-toggle" aria-label="Collapse side panel" hidden>{% icon "sidebar-simple" %}</button>
+<nav class="it-panel-shortcuts" aria-label="Side panel sections">
+  {% if notifications %}<a href="#feed-title" aria-label="Notifications" title="Notifications">{% icon "bell" %}</a>{% endif %}
+  {% if calendar %}<a href="#calendar-title" aria-label="Calendar" title="Calendar">{% icon "calendar-blank" %}</a>{% endif %}
+</nav>

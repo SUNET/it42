@@ -27,14 +27,13 @@
 .it-app .form-check-input:checked { background-color: var(--it-midnight); border-color: var(--it-midnight); }
 
 /* Sidebar: the org under the logo, panels as sub items */
-.it-org-name { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; padding: 4px 8px; color: var(--it-black-80); font: 600 var(--it-text-14) var(--it-font-sans); }
+.it-org-name { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; padding: 4px 8px; overflow-wrap: anywhere; color: var(--it-black-80); font: 600 var(--it-text-14) var(--it-font-sans); }
 .it-org-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--it-org-color, var(--it-black-20)); flex: none; }
 .it-sidebar-sub { padding-left: 36px; }
 .it-sub-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--it-black-20); flex: none; }
 
 /* Grant board: seven stage columns in their role colours */
-.it-board-7 { grid-template-columns: repeat(7, minmax(164px, 1fr)); overflow-x: auto; padding-bottom: 4px; }
-@media (max-width: 1399.98px) { .it-board-7 { grid-template-columns: repeat(7, 240px); } }
+.it-board-7 { --it-board-columns: 7; }
 .it-board-7 .it-app-card-grant span, .it-board-7 .it-app-card h3 { overflow-wrap: anywhere; }
 .it-board-7 .it-status { white-space: normal; }
 .it-column-signing { background: var(--it-organization-3); }
@@ -50,7 +49,6 @@
 .it-person { display: flex; align-items: center; gap: 8px; font: 400 var(--it-text-12) var(--it-font-sans); }
 
 /* Right panel: calendar and deadlines */
-.it-panel { width: 300px; }
 .it-panel-sub { color: var(--it-black-40); font-weight: 400 !important; font-size: 12px !important; }
 .it-cal { width: 100%; border-collapse: collapse; table-layout: fixed; text-align: center; font: 400 var(--it-text-12) var(--it-font-sans); }
 .it-cal caption { caption-side: top; padding: 0 4px 8px; color: var(--it-black-100); font: 600 var(--it-text-14) var(--it-font-sans); text-align: left; }
@@ -260,8 +258,7 @@
 .it-inline-form .form-control { width: auto; }
 
 /* Research organisation board (Dashboard / Organization, "Your decision") */
-.it-board-4 { grid-template-columns: repeat(4, minmax(220px, 1fr)); overflow-x: auto; padding-bottom: 4px; }
-@media (max-width: 1199.98px) { .it-board-4 { grid-template-columns: repeat(4, 260px); } }
+.it-board-4 { --it-board-columns: 4; }
 .it-board-caption { margin: 0 0 12px; color: var(--it-black-40); font: 400 var(--it-text-12) var(--it-font-sans); }
 .it-board-caption strong { margin-right: 6px; color: var(--it-black-100); font-weight: 600; font-size: var(--it-text-14); }
 .it-column-declined, .it-column-expired { background: var(--it-black-4); }
