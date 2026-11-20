@@ -29,7 +29,7 @@ from it42.common.formschema import (
     SchemaError,
     build_form,
 )
-from it42.common.http import post_required
+from it42.common.http import board_card, post_required
 from it42.common.statuses import ENDED_BEFORE_REVIEW, NOT_REVIEWABLE, ApplicationStatus
 from it42.common.theme import core_site_host
 from it42.org.applications.models import Application, Question
@@ -518,6 +518,7 @@ def grant_create(request: HttpRequest) -> HttpResponse:
 
 
 @admin_required
+@board_card
 def grant_edit(request: HttpRequest, grant_id: int) -> HttpResponse:
     grant = get_object_or_404(Grant, pk=grant_id)
     if grant.status != Grant.Status.DRAFT:

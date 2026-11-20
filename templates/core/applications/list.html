@@ -37,7 +37,7 @@
                     <button class="it-icon-btn it-icon-btn-danger" type="submit" aria-label="Delete the draft for {{ draft.grant.title }}" title="Delete draft">{% icon "x" %}</button>
                   </form>
                 </div>
-                <h3><a href="{% url 'apply' draft.grant.org_slug draft.grant.grant_public_id %}">{{ draft.grant.title }}</a></h3>
+                <h3><a data-board-card href="{% url 'apply' draft.grant.org_slug draft.grant.grant_public_id %}">{{ draft.grant.title }}</a></h3>
                 <div class="it-app-card-grant">
                   {% icon "hand-coins" %}
                   <div><strong>{{ draft.grant.org_name }}</strong><span>Saved {{ draft.updated_at|date:"j M, H:i" }}</span></div>
@@ -63,7 +63,7 @@
                 <span data-status="{{ app.status }}">{% status_pill app.status %}</span>
                 {% if app.status == "under_review" %}{% icon "lock" %}{% endif %}
               </div>
-              <h3><a href="{% url 'my_application' app.public_id %}">{{ app.grant.title }}</a></h3>
+              <h3><a data-board-card href="{% url 'my_application' app.public_id %}">{{ app.grant.title }}</a></h3>
               <div class="it-app-card-grant">
                 {% icon "hand-coins" %}
                 <div><strong>{{ app.grant.org_name }}</strong><span>Closes {{ app.grant.deadline|date:"j M Y" }}</span></div>

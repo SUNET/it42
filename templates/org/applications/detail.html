@@ -154,7 +154,7 @@
             </div>
           {% empty %}<p class="it-files-empty">No questions yet.</p>{% endfor %}
           {% if application.reviewable %}
-          <form method="post" action="{% url 'application_ask' application.pk %}" class="it-card">{% csrf_token %}
+          <form data-guard-card-edits method="post" action="{% url 'application_ask' application.pk %}" class="it-card">{% csrf_token %}
             <label class="form-label fw-semibold mb-0" for="question-text">Ask a question</label>
             <textarea class="form-control" id="question-text" name="text" rows="3" maxlength="5000" required></textarea>
             <div><button class="btn btn-primary" type="submit">Send to applicant</button></div>
@@ -169,7 +169,7 @@
     <section class="it-tabpanel" id="activity" role="tabpanel" aria-label="Activity">
       <div class="it-detail-body">
         <div class="it-stack">
-          <form method="post" action="{% url 'application_note' application.pk %}" class="it-composer">{% csrf_token %}
+          <form data-guard-card-edits method="post" action="{% url 'application_note' application.pk %}" class="it-composer">{% csrf_token %}
             <label class="visually-hidden" for="note-text">Internal note</label>
             <textarea class="form-control" id="note-text" name="text" rows="1" maxlength="5000" required placeholder="Write an internal note for the granter team…"></textarea>
             <button class="btn btn-primary" type="submit">Post</button>

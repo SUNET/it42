@@ -22,7 +22,7 @@
     </div>
     {% if req.status == "pending" %}
       {% if can_decide %}
-      <form method="post" action="{% url 'request_sign' req.pk %}" class="it-infobar-actions" data-sign-form>{% csrf_token %}
+      <form data-guard-card-edits method="post" action="{% url 'request_sign' req.pk %}" class="it-infobar-actions" data-sign-form>{% csrf_token %}
         <label class="it-label mb-0" for="comment">Sign on behalf of {{ research_org.name }}</label>
         <textarea class="form-control" id="comment" name="comment" rows="2" maxlength="2000" placeholder="Comment for the funder (optional)"></textarea>
         <div class="form-check">
@@ -33,7 +33,7 @@
       </form>
       <details class="it-decline">
         <summary>Decline instead</summary>
-        <form method="post" action="{% url 'request_decline' req.pk %}" class="it-infobar-actions" data-decline-form>{% csrf_token %}
+        <form data-guard-card-edits method="post" action="{% url 'request_decline' req.pk %}" class="it-infobar-actions" data-decline-form>{% csrf_token %}
           <label class="it-label mb-0" for="reason">Reason (the applicant sees it)</label>
           <textarea class="form-control" id="reason" name="reason" rows="3" maxlength="2000" required></textarea>
           <button class="btn btn-outline-danger" type="submit">Decline</button>

@@ -7,7 +7,7 @@
     <span class="it-tag-soft">{{ seat.role_label }}</span>
   </div>
   <div>
-    <h2 class="it-panel-card-title"><a href="{% url 'review_panel' panel.pk %}">{{ panel.name }}</a></h2>
+    <h2 class="it-panel-card-title"><a data-board-card href="{% url 'review_panel' panel.pk %}">{{ panel.name }}</a></h2>
     <p class="it-panel-card-sub">{{ card.application_count }} application{{ card.application_count|pluralize }} to review · Chair: {% if card.chair == "You" %}You{% elif card.chair %}{{ card.chair.display_name }}{% else %}not set{% endif %}</p>
   </div>
   <p class="it-panel-card-tasks">{% if card.open_tasks %}Open now: {% for t in card.open_tasks %}{{ t.title }} (until {{ t.ends_at|date:"j M, H:i" }}){% if not forloop.last %}; {% endif %}{% endfor %}{% else %}No task is open right now.{% endif %}</p>
@@ -36,7 +36,7 @@
   <div class="it-panel-card-foot">
     <span class="it-avatars" aria-hidden="true">{% for m in card.reviewers|slice:":6" %}<span class="it-avatar it-avatar-sm">{{ m.display_name|initials }}</span>{% endfor %}</span>
     <span class="it-meta">{{ card.reviewers|length }} reviewer{{ card.reviewers|length|pluralize }}</span>
-    <a class="it-panel-card-open" href="{% url 'review_panel' panel.pk %}" aria-label="Open {{ panel.name }}">Open panel {% icon "arrow-right" %}</a>
+    <a class="it-panel-card-open" data-board-card href="{% url 'review_panel' panel.pk %}" aria-label="Open {{ panel.name }}">Open panel {% icon "arrow-right" %}</a>
   </div>
 </article>
 {% endwith %}

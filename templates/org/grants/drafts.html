@@ -87,7 +87,7 @@ them) as cards, filtered by status. Folder and grant actions are plain POST form
             </div>
           </details>
         </div>
-        <h3><a href="{% if grant.status == 'draft' %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
+        <h3><a data-board-card href="{% if grant.status == 'draft' and is_org_admin %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
         <p class="it-draft-card-text">{{ grant.description|truncatewords:18 }}</p>
         <div class="it-draft-card-foot">
           {% if grant.status == "draft" %}{% include "includes/status_pill.html" with tone="grey" label="Unpublished" %}{% elif grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}

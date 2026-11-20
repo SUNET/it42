@@ -35,7 +35,7 @@
               <div class="it-app-card-top">
                 <span class="it-status it-status-{% if req.status == 'pending' %}violet{% elif req.status == 'signed' %}green{% elif req.status == 'declined' %}red{% else %}grey{% endif %}"><span class="it-status-dot" aria-hidden="true"></span>{{ req.get_status_display }}</span>
               </div>
-              <h3><a href="{% url 'request_detail' req.pk %}">{{ req.grant_title }}</a></h3>
+              <h3><a data-board-card href="{% url 'request_detail' req.pk %}">{{ req.grant_title }}</a></h3>
               <div class="it-app-card-grant">
                 {% icon "hand-coins" %}
                 <div><strong>{{ card.funder }}</strong><span>Grant call</span></div>

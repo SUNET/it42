@@ -63,7 +63,7 @@ of assigned). "Eligible" counts the applications that passed organisation sign-o
         </div>
         <div class="it-grant-panel-foot">
           <span class="it-meta">{{ card.reviewers }} reviewer{{ card.reviewers|pluralize }} · sign-off by {{ grant.signature_deadline|date:"j M" }}</span>
-          <a class="it-panel-card-open" href="{% url 'grant_applications' grant.pk %}">Open grant {% icon "arrow-right" %}</a>
+          <a class="it-panel-card-open" data-board-card href="{% url 'grant_applications' grant.pk %}">Open grant {% icon "arrow-right" %}</a>
         </div>
       </li>
       {% endwith %}

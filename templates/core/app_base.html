@@ -60,5 +60,9 @@ overlay is open).
   </div>
   {% block panel %}{% endblock %}
 </div>
-<script src="{% static 'it42/panels.js' %}"></script>
+{% if not request.META.IT42_BOARD_CARD %}
+  {% include "includes/board_card_dialog.html" %}
+  <script src="{% static 'it42/panels.js' %}"></script>
+{% endif %}
+<script src="{% static 'it42/board-card.js' %}"></script>
 {% endblock body %}
