@@ -20,7 +20,7 @@ Tests mirror these zones under `tests/`. Django templates live in `templates/`, 
 
 ## Coding Style & Naming Conventions
 
-Use four-space Python indentation, a 100-character line limit, and Ruff-managed formatting and imports. Use `snake_case` for functions and modules and `PascalCase` for classes. Follow existing type annotations and Django app conventions; place business operations in existing `services.py` modules where appropriate.
+Use four-space Python indentation, a 100-character line limit, and Ruff-managed formatting and imports. Use `snake_case` for functions and modules and `PascalCase` for classes. Follow existing type annotations and Django app conventions; place business operations in existing `services.py` modules where appropriate. Add docstrings and code comments explaining properly for all code and update/add while editing any new code.
 
 ## Testing Guidelines
 

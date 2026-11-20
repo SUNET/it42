@@ -18,6 +18,7 @@
 
   const form = document.getElementById("grant-form");
   if (!form) return;
+  const content = form.closest(".it-app-content");
   const mobilePanels = form.querySelector(".fb-mobile-panels");
   const compact = window.matchMedia("(max-width: 1199.98px)");
   function resizePanels() { mobilePanels.open = !compact.matches; }
@@ -42,7 +43,7 @@
   const reserved = new Set(["documents", "csrfmiddlewaretoken"]);
   const LAYOUT = new Set(["heading", "paragraph", "deadline", "link"]);
   const THRESHOLD = 5; // px before a press becomes a drag
-  const EDGE = 48; // px from the viewport edge where the page auto-scrolls
+  const EDGE = 48; // px from the content edge where a drag auto-scrolls
 
   let schema = [];
   let editing = -1; // index into schema of the card with its editor open
@@ -422,7 +423,7 @@
   // instead of its preview. Keeps the scroll position when re-drawing during an edit.
   function renderCards() {
     const open = canvasEl.querySelector(".fb-card.is-editing");
-    const scrollY = window.scrollY;
+    const scrollTop = content.scrollTop;
     canvasEl.replaceChildren();
     const added = schema.map((spec, index) => ({ spec, index })).filter((s) => !isLocked(s.spec));
     if (!added.length) {
@@ -477,7 +478,7 @@
       );
       canvasEl.append(card);
     });
-    if (open) window.scrollTo(0, scrollY);
+    if (open) content.scrollTop = scrollTop;
   }
 
   // Move keyboard focus to the card of schema index `index`.
@@ -777,8 +778,9 @@
       placeAt(drag.card, event.clientY);
       const rect = drag.card.getBoundingClientRect();
       drag.card.style.transform = "translateY(" + Math.round(event.clientY - (rect.top + rect.height / 2)) + "px)";
-      if (event.clientY < EDGE) window.scrollBy(0, -Math.ceil((EDGE - event.clientY) / 4));
-      else if (event.clientY > window.innerHeight - EDGE) window.scrollBy(0, Math.ceil((event.clientY - window.innerHeight + EDGE) / 4));
+      const { top, bottom } = content.getBoundingClientRect();
+      if (event.clientY < top + EDGE) content.scrollBy(0, -Math.ceil((top + EDGE - event.clientY) / 4));
+      else if (event.clientY > bottom - EDGE) content.scrollBy(0, Math.ceil((event.clientY - bottom + EDGE) / 4));
     });
     canvasEl.addEventListener("pointerup", (event) => { if (drag && event.pointerId === drag.pointerId) finish(false); });
     canvasEl.addEventListener("pointercancel", (event) => { if (drag && event.pointerId === drag.pointerId) finish(true); });

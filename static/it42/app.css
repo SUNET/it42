@@ -90,6 +90,20 @@
 .it-app-content { flex: 1 1 auto; display: flex; flex-direction: column; gap: 24px; padding: 28px; }
 .it-messages .alert { margin-bottom: 0; }
 
+/* Keep navigation in the viewport while the main content scrolls. */
+@media screen {
+  .it-app { height: 100vh; height: 100dvh; min-height: 0; overflow: clip; }
+  .it-app-main { min-height: 0; }
+  .it-topbar { flex: none; }
+  .it-app-content { min-height: 0; overflow: auto; }
+  .it-app-content > * { flex-shrink: 0; }
+  .it-sidebar, .it-panel { overflow-y: auto; }
+}
+
+@media screen and (max-width: 991.98px) {
+  .it-sidebar, .it-panel, .it-topbar { max-height: 30dvh; overflow-y: auto; }
+}
+
 @media (max-width: 991.98px) {
   .it-app { flex-direction: column; }
   .it-sidebar { width: auto; border-right: 0; border-bottom: 1px solid var(--it-black-10); padding: 12px 16px; }
@@ -119,7 +133,7 @@
 .it-board {
   --it-board-columns: 3;
   display: grid; grid-template-columns: repeat(var(--it-board-columns), minmax(max(240px, calc(10vw + 24px)), 1fr));
-  gap: 16px; align-items: stretch; flex: 1 1 auto; min-width: 0; max-width: 100%;
+  gap: 16px; align-items: stretch; flex: 1 0 auto; min-width: 0; max-width: 100%;
   overflow-x: auto; padding-bottom: 12px;
 }
 .it-board:focus-visible { outline: 2px solid var(--it-midnight); outline-offset: 2px; }
