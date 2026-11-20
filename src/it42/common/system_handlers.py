@@ -4,7 +4,7 @@ import logging
 
 from django.conf import settings
 
-from .events import Envelope
+from .events import Envelope, RejectEvent
 from .inbox import handler
 from .outbox import emit
 from .routing import RO, core_to_org, org_to_core, org_to_ro, ro_to_org
@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 def reply_exchange(sender: str) -> str:
     match settings.APP_ROLE:
         case "core":
+            if sender == RO:
+                raise RejectEvent("system.ping is not supported on the one-way ro-to-core route")
             return core_to_org(sender)
         case "ro":
             return ro_to_org(sender)

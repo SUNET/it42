@@ -59,7 +59,9 @@ def test_core_queues_and_sender() -> None:
         "o3-to-core",
         "o4-to-core",
         "o5-to-core",
+        "ro-to-core",
     ]
+    assert sender_of("ro-to-core") == "ro"
     assert sender_of("o1-to-core") == "o1"
     assert sender_of("o2-to-core") == "o2"
     assert sender_of("o3-to-core") == "o3"
@@ -105,6 +107,14 @@ def test_ping_is_answered_through_the_outbox() -> None:
     process(body(type="system.ping"), "o2-to-core")
     reply = OutboxEvent.objects.get()
     assert (reply.exchange, reply.type) == ("core-to-o2", "system.pong")
+
+
+@pytest.mark.django_db
+def test_ping_on_the_one_way_ro_route_is_rejected_without_a_reply() -> None:
+    with pytest.raises(RejectEvent, match="one-way"):
+        process(body(type="system.ping"), "ro-to-core")
+    assert not OutboxEvent.objects.exists()
+    assert not ProcessedEvent.objects.exists()
 
 
 class FakeChannel:

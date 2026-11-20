@@ -29,8 +29,8 @@ ORG_SETTABLE_STATUSES = (
     ApplicationStatus.REJECTED,
 )
 
-# How sign-off can end (application.status_changed from the org's own handlers). Only
-# valid while the application waits for its signature.
+# How sign-off can end. Received/declined come directly from the RO zone; expired is
+# emitted by the funding org that owns the deadline. Only valid while awaiting signature.
 SIGNING_OUTCOMES = (
     ApplicationStatus.RECEIVED,
     ApplicationStatus.RO_DECLINED,
@@ -39,6 +39,7 @@ SIGNING_OUTCOMES = (
 
 # Not (yet) open for review: no status changes, questions or panel work.
 NOT_REVIEWABLE = (
+    ApplicationStatus.SUBMITTED,
     ApplicationStatus.AWAITING_SIGNATURE,
     ApplicationStatus.RO_DECLINED,
     ApplicationStatus.RO_EXPIRED,

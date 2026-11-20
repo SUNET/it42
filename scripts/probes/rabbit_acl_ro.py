@@ -1,7 +1,8 @@
 """Run inside the RO worker: probe RabbitMQ permissions with the RO zone's credentials.
 
-The RO zone may only publish to ro-to-<org> and read <org>-to-ro; it has no link to the
-core. Each probe opens a fresh channel and prints "<name> ALLOWED" or
+The RO zone may publish to ro-to-<org> and ro-to-core, and read <org>-to-ro. These
+negative probes cover every other class of resource. Each probe opens a fresh channel
+and prints "<name> ALLOWED" or
 "<name> <code> <text>". Publishes use publisher confirms so a refusal is synchronous.
 """
 

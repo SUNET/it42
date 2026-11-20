@@ -103,14 +103,21 @@ def test_signing_needs_the_confirmation(kth_signer: Client, kth_request: Signatu
     assert not OutboxEvent.objects.exists()
 
 
-def test_sign_tells_the_org(kth_signer: Client, kth_request: SignatureRequest) -> None:
+def test_sign_tells_core(kth_signer: Client, kth_request: SignatureRequest) -> None:
     kth_signer.post(f"/requests/{kth_request.pk}/sign/", {"comment": "Fine.", "confirm": "on"})
     kth_request.refresh_from_db()
     assert (kth_request.status, kth_request.comment) == ("signed", "Fine.")
-    event = OutboxEvent.objects.get()
-    assert (event.exchange, event.type) == ("ro-to-o1", "signature.granted")
-    assert event.payload["method"] == "click"
-    assert event.payload["signer"]["email"] == "sig2@kth.se"
+    core_event = OutboxEvent.objects.get(exchange="ro-to-core")
+    assert core_event.type == "signature.granted"
+    assert core_event.payload == {
+        "application_id": str(kth_request.public_id),
+        "org_slug": "o1",
+        "research_org": "kth",
+        "signer": {"name": "sig2", "email": "sig2@kth.se"},
+        "signed_at": kth_request.decided_at.isoformat(),
+        "comment": "Fine.",
+        "method": "click",
+    }
     # Decided once: a second click changes nothing.
     kth_signer.post(f"/requests/{kth_request.pk}/decline/", {"reason": "Oops"})
     assert OutboxEvent.objects.count() == 1
@@ -124,14 +131,15 @@ def test_decline_needs_a_reason_and_tells_the_org(
     kth_signer.post(f"/requests/{kth_request.pk}/decline/", {"reason": "Not employed here."})
     kth_request.refresh_from_db()
     assert kth_request.status == "declined"
-    event = OutboxEvent.objects.get()
-    assert (event.type, event.payload["reason"]) == ("signature.declined", "Not employed here.")
+    event = OutboxEvent.objects.get(type="signature.declined")
+    assert event.exchange == "ro-to-core"
+    assert event.payload["reason"] == "Not employed here."
 
 
 def test_answers_to_the_right_org(kth_signer: Client) -> None:
     request = requested("kth", sender="o2")
     kth_signer.post(f"/requests/{request.pk}/sign/", {"confirm": "on"})
-    assert OutboxEvent.objects.get().exchange == "ro-to-o2"
+    assert OutboxEvent.objects.get(exchange="ro-to-core").payload["org_slug"] == "o2"
 
 
 def test_no_signing_after_the_deadline(kth_signer: Client) -> None:

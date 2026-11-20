@@ -69,17 +69,23 @@ def test_org_permissions_are_limited_to_own_queues(definitions: dict) -> None:
         assert not can(definitions, "o1", "read", forbidden)
 
 
-def test_ro_permissions_reach_only_the_orgs(definitions: dict) -> None:
+@pytest.mark.parametrize("org", ["o1", "o2", "o3"])
+def test_orgs_cannot_publish_ro_decisions(definitions: dict, org: str) -> None:
+    assert not can(definitions, org, "write", "ro-to-core")
+
+
+def test_ro_permissions_reach_only_the_orgs_and_core_decision_flow(definitions: dict) -> None:
     for org in ("o1", "o2", "o3", "o4", "o5"):
         assert can(definitions, "ro", "write", f"ro-to-{org}")
         assert can(definitions, "ro", "read", f"{org}-to-ro")
-    for forbidden in ("core-to-o1", "o1-to-core", "o1-to-ro", "ro-to-core", "ro-to-o1.dlq"):
+    assert can(definitions, "ro", "write", "ro-to-core")
+    for forbidden in ("core-to-o1", "o1-to-core", "o1-to-ro", "ro-to-o1.dlq"):
         assert not can(definitions, "ro", "write", forbidden)
     for forbidden in ("core-to-o1", "o1-to-core", "ro-to-o1", "o1-to-ro.dlq"):
         assert not can(definitions, "ro", "read", forbidden)
-    # The core has no link to the RO zone.
+    # The link is one-way: only RO decisions go directly to core.
     assert not can(definitions, "core", "write", "core-to-ro")
-    assert not can(definitions, "core", "read", "ro-to-core")
+    assert can(definitions, "core", "read", "ro-to-core")
     assert not can(definitions, "core", "read", "o1-to-ro")
 
 
@@ -89,12 +95,21 @@ def test_core_permissions(definitions: dict) -> None:
     assert not can(definitions, "core", "write", "core-to-o|")
     assert not can(definitions, "core", "write", "o1-to-core")
     assert can(definitions, "core", "read", "o2-to-core")
+    assert can(definitions, "core", "read", "ro-to-core")
     assert not can(definitions, "core", "read", "core-to-o1")
 
 
 def test_queues_are_quorum_with_delivery_limit_and_dlq(definitions: dict) -> None:
     queues = {q["name"]: q["arguments"] for q in definitions["queues"]}
-    for name in ("core-to-o1", "o1-to-core", "core-to-o2", "o2-to-core", "o1-to-ro", "ro-to-o2"):
+    for name in (
+        "core-to-o1",
+        "o1-to-core",
+        "core-to-o2",
+        "o2-to-core",
+        "o1-to-ro",
+        "ro-to-o2",
+        "ro-to-core",
+    ):
         args = queues[name]
         assert args["x-queue-type"] == "quorum"
         assert args["x-delivery-limit"] == 5
