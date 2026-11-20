@@ -200,7 +200,7 @@ def panel_detail(request: HttpRequest, panel_id: int) -> HttpResponse:
         for a in Assessment.objects.filter(member__panel=panel, application_id__in=ids):
             panel_scores.setdefault(a.application_id, []).append(a.preliminary_grade)
         latest = list(
-            Assessment.objects.filter(member__panel=panel)
+            Assessment.objects.filter(member__panel=panel, application_id__in=ids)
             .exclude(member=seat)
             .select_related("member", "member__user", "application")
             .order_by("-updated_at")[:3]

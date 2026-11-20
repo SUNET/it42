@@ -1,5 +1,5 @@
-"""The organisation's decision. Each one writes its event to the org in the same
-transaction (signature.granted / signature.declined).
+"""The organisation's decision. Each one writes its event directly to core in the same
+transaction (signature.granted / signature.declined); core authenticates and relays it.
 
 The signature is a recorded click: who, when and an optional comment, sent with
 ``method: "click"`` so that signing through an external system can be added later.
@@ -9,7 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from it42.common.outbox import emit
-from it42.common.routing import ro_to_org
+from it42.common.routing import ro_to_core
 from it42.ro.accounts.models import User
 
 from .models import SignatureRequest
@@ -48,10 +48,12 @@ def sign(request_id: int, research_org: str, user: User, comment: str) -> Signat
         request.comment = comment
         request.save()
         emit(
-            ro_to_org(request.org_slug),
+            ro_to_core(),
             "signature.granted",
             {
                 "application_id": str(request.public_id),
+                "org_slug": request.org_slug,
+                "research_org": request.research_org,
                 "signer": _signer(user),
                 "signed_at": request.decided_at.isoformat(),
                 "comment": comment,
@@ -73,10 +75,12 @@ def decline(request_id: int, research_org: str, user: User, reason: str) -> Sign
         request.comment = reason
         request.save()
         emit(
-            ro_to_org(request.org_slug),
+            ro_to_core(),
             "signature.declined",
             {
                 "application_id": str(request.public_id),
+                "org_slug": request.org_slug,
+                "research_org": request.research_org,
                 "signer": _signer(user),
                 "declined_at": request.decided_at.isoformat(),
                 "reason": reason,

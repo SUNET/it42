@@ -59,7 +59,9 @@ def test_core_queues_and_sender() -> None:
         "o3-to-core",
         "o4-to-core",
         "o5-to-core",
+        "ro-to-core",
     ]
+    assert sender_of("ro-to-core") == "ro"
     assert sender_of("o1-to-core") == "o1"
     assert sender_of("o2-to-core") == "o2"
     assert sender_of("o3-to-core") == "o3"

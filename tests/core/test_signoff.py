@@ -41,6 +41,19 @@ def event(application: ApplicationCopy, type: str, seq: int, **payload: Any) -> 
     ).to_json()
 
 
+def ro_event(application: ApplicationCopy, type: str, **payload: Any) -> bytes:
+    return Envelope(
+        type=type,
+        payload={
+            "application_id": str(application.public_id),
+            "org_slug": application.org_slug,
+            "research_org": application.research_org,
+            **payload,
+        },
+        application_id=application.public_id,
+    ).to_json()
+
+
 @pytest.fixture
 def grant(make_grant: Callable[..., PublicGrant]) -> PublicGrant:
     return make_grant("o1", form_schema=SCHEMA)
@@ -95,39 +108,89 @@ def test_signed_application_shows_the_signer(
 ) -> None:
     signed_at = timezone.now()
     process(
-        event(
+        ro_event(
             application,
-            "application.status_changed",
-            2,
-            status="received",
-            signature={
-                "research_org": "kth",
-                "signer_name": "Nils Hedlund",
-                "signed_at": signed_at.isoformat(),
-            },
+            "signature.granted",
+            signer={"name": "Nils Hedlund", "email": "nils@kth.se"},
+            signed_at=signed_at.isoformat(),
+            comment="Fine by us.",
+            method="click",
         ),
-        "o1-to-core",
+        "ro-to-core",
     )
     application.refresh_from_db()
     assert (application.status, application.signed_by) == ("received", "Nils Hedlund")
+    relayed = OutboxEvent.objects.get(type="signature.granted")
+    assert relayed.exchange == "core-to-o1"
+    assert relayed.payload["comment"] == "Fine by us."
     body = u2_client.get(f"/my/applications/{application.public_id}/").content.decode()
     assert "Signed by Nils Hedlund for KTH Royal Institute of Technology" in body
 
 
 def test_a_signature_for_another_organisation_is_rejected(application: ApplicationCopy) -> None:
-    body = event(
+    body = ro_event(
         application,
-        "application.status_changed",
-        2,
-        status="received",
-        signature={
-            "research_org": "uu",
-            "signer_name": "x",
-            "signed_at": "2026-10-20T10:00:00+00:00",
-        },
+        "signature.granted",
+        research_org="uu",
+        signer={"name": "x", "email": ""},
+        signed_at="2026-10-20T10:00:00+00:00",
+        comment="",
+        method="click",
     )
     with pytest.raises(RejectEvent):
-        process(body, "o1-to-core")
+        process(body, "ro-to-core")
+
+
+@pytest.mark.parametrize("status", ["received", "ro_declined"])
+def test_an_org_publisher_cannot_forge_an_ro_decision(
+    application: ApplicationCopy, status: str
+) -> None:
+    with pytest.raises(RejectEvent, match="must come directly from ro"):
+        process(
+            event(application, "application.status_changed", 2, status=status, reason="forged"),
+            "o1-to-core",
+        )
+    application.refresh_from_db()
+    assert application.status == "awaiting_signature"
+
+
+def test_an_org_publisher_cannot_send_a_direct_ro_event(application: ApplicationCopy) -> None:
+    with pytest.raises(RejectEvent, match="must come directly from ro"):
+        process(
+            ro_event(
+                application,
+                "signature.granted",
+                signer={"name": "Forged", "email": ""},
+                signed_at=timezone.now().isoformat(),
+                comment="",
+                method="click",
+            ),
+            "o1-to-core",
+        )
+    application.refresh_from_db()
+    assert application.status == "awaiting_signature"
+
+
+def test_org_status_updates_continue_after_a_direct_ro_decision(
+    application: ApplicationCopy,
+) -> None:
+    process(
+        ro_event(
+            application,
+            "signature.granted",
+            signer={"name": "Nils Hedlund", "email": ""},
+            signed_at=timezone.now().isoformat(),
+            comment="",
+            method="click",
+        ),
+        "ro-to-core",
+    )
+    process(
+        event(application, "application.status_changed", 2, status="under_review"),
+        "o1-to-core",
+    )
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("under_review", 2)
 
 
 def test_review_statuses_wait_for_the_signature(application: ApplicationCopy) -> None:
@@ -143,14 +206,14 @@ def test_declined_application_shows_the_reason_and_can_be_sent_again(
     u2_client: Client, grant: PublicGrant, application: ApplicationCopy
 ) -> None:
     process(
-        event(
+        ro_event(
             application,
-            "application.status_changed",
-            2,
-            status="ro_declined",
+            "signature.declined",
+            signer={"name": "Nils Hedlund", "email": ""},
+            declined_at=timezone.now().isoformat(),
             reason="Not employed here.",
         ),
-        "o1-to-core",
+        "ro-to-core",
     )
     application.refresh_from_db()
     assert (application.status, application.decline_reason) == ("ro_declined", "Not employed here.")
@@ -197,6 +260,34 @@ def test_signing_statuses_need_an_organisation(
         )
     with pytest.raises(RejectEvent):
         process(
-            event(application, "application.status_changed", 1, status="ro_declined", reason="x"),
-            "o1-to-core",
+            ro_event(application, "signature.declined", reason="x"),
+            "ro-to-core",
         )
+
+
+def test_a_fast_ro_decision_cannot_be_reverted_by_the_org_acknowledgement(
+    u2_client: Client, grant: PublicGrant
+) -> None:
+    apply(u2_client, grant, **ANSWERS)
+    application = ApplicationCopy.objects.get()
+    process(
+        ro_event(
+            application,
+            "signature.granted",
+            signer={"name": "Nils Hedlund", "email": ""},
+            signed_at=timezone.now().isoformat(),
+            comment="",
+            method="click",
+        ),
+        "ro-to-core",
+    )
+    process(event(application, "application.received", 1, awaiting_signature=True), "o1-to-core")
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("received", 1)
+
+
+def test_application_received_cannot_bypass_the_ro_decision(application: ApplicationCopy) -> None:
+    with pytest.raises(RejectEvent, match="first event"):
+        process(event(application, "application.received", 2), "o1-to-core")
+    application.refresh_from_db()
+    assert (application.status, application.last_seq) == ("awaiting_signature", 1)

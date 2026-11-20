@@ -1,9 +1,9 @@
-"""Application events from the core, and signature events from the research
-organisation (RO) zone.
+"""Application events from the core, including RO decisions that core authenticated and
+relayed.
 
 The sender comes from the arrival queue (``routing.sender_of``): "core" or "ro". Each
-handler accepts only its own sender, so the RO zone can never submit an application or
-answer a question, and the core can never sign.
+handler accepts only its own sender. Signature handlers accept only core relays, so an
+event arriving directly on the RO-to-org diagnostic path cannot change application state.
 """
 
 import logging
@@ -21,7 +21,7 @@ from it42.common.events import Envelope, RejectEvent
 from it42.common.formschema import SchemaError, build_form, research_org_of
 from it42.common.inbox import handler
 from it42.common.outbox import emit
-from it42.common.routing import RO, org_to_core, org_to_ro
+from it42.common.routing import org_to_core, org_to_ro
 from it42.common.statuses import ApplicationStatus
 from it42.org.grants.models import Grant
 
@@ -159,10 +159,12 @@ def on_question_answered(envelope: Envelope, sender: str) -> None:
 
 
 def _awaiting(envelope: Envelope, sender: str) -> Application | None:
-    """The application a signature event is about, locked; None (and the event is
-    acknowledged and dropped) when it no longer waits for a signature, for example a late
-    answer after the org let it expire."""
-    _require_sender(envelope, sender, RO)
+    """Lock the application for a core-authorized decision.
+
+    A core decision overrides a local expiry because core has already arbitrated the
+    independently delivered RO decision against the org's expiry event.
+    """
+    _require_sender(envelope, sender, "core")
     application = (
         Application.objects.select_for_update().filter(public_id=envelope.application_id).first()
         if envelope.application_id
@@ -170,6 +172,13 @@ def _awaiting(envelope: Envelope, sender: str) -> Application | None:
     )
     if application is None or not application.research_org:
         raise RejectEvent(f"no application {envelope.application_id} waits for a signature")
+    if application.status == ApplicationStatus.RO_EXPIRED:
+        logger.info(
+            "applying core-authorized %s for locally expired %s",
+            envelope.type,
+            application.public_id,
+        )
+        return application
     if application.status != ApplicationStatus.AWAITING_SIGNATURE:
         logger.info(
             "ignoring %s for %s: it is %s", envelope.type, application.public_id, application.status
@@ -202,21 +211,12 @@ def _decide(
     signer: tuple[str, str],
     when: datetime,
     note: str,
-    extra: dict[str, Any],
 ) -> None:
     application.status = status
     application.signed_by, application.signed_by_email = signer
     application.signed_at = when
     application.signature_note = note
-    seq = application.next_seq()
     application.save()
-    emit(
-        org_to_core(settings.ORG_SLUG),
-        "application.status_changed",
-        {"application_id": str(application.public_id), "status": status, "seq": seq, **extra},
-        application_id=application.public_id,
-        seq=seq,
-    )
 
 
 @handler("signature.granted")
@@ -234,13 +234,6 @@ def on_signature_granted(envelope: Envelope, sender: str) -> None:
         signer,
         signed_at,
         comment,
-        {
-            "signature": {
-                "research_org": application.research_org,
-                "signer_name": signer[0],
-                "signed_at": signed_at.isoformat(),
-            }
-        },
     )
 
 
@@ -257,7 +250,6 @@ def on_signature_declined(envelope: Envelope, sender: str) -> None:
         _signer(payload),
         _when(payload.get("declined_at"), envelope),
         reason,
-        {"reason": reason},
     )
 
 

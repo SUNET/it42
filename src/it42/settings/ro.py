@@ -2,8 +2,8 @@
 
 One site and one database serve every research organisation (RO) in the directory
 (``config/research_orgs.toml``, ``it42.common.research_orgs``); each user belongs to one
-RO and sees only its requests. The RO zone talks only to the orgs (``o1-to-ro``,
-``ro-to-o1``, ...), never to the core.
+RO and sees only its requests. The RO zone receives requests from the orgs and sends
+decisions directly to core, which authenticates and relays them to the requesting org.
 """
 
 from it42.common.saml_config import IT42_DOMAIN, build_saml_config

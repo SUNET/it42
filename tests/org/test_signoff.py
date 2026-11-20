@@ -145,7 +145,7 @@ def test_signature_opens_the_application_for_review(waiting: Application) -> Non
             comment="Fine by us.",
             method="click",
         ),
-        "ro-to-o1",
+        "core-to-o1",
     )
     waiting.refresh_from_db()
     assert (waiting.status, waiting.signed_by, waiting.signature_note) == (
@@ -153,21 +153,13 @@ def test_signature_opens_the_application_for_review(waiting: Application) -> Non
         "Nils Hedlund",
         "Fine by us.",
     )
-    changed = OutboxEvent.objects.get(type="application.status_changed")
-    assert changed.exchange == "o1-to-core"
-    assert changed.payload["status"] == "received"
-    assert changed.payload["signature"] == {
-        "research_org": "kth",
-        "signer_name": "Nils Hedlund",
-        "signed_at": signed_at.isoformat(),
-    }
-    # The comment is for the org; the core only hears who signed and when.
-    assert "Fine by us." not in str(changed.payload)
+    assert waiting.seq == 1
+    assert not OutboxEvent.objects.filter(type="application.status_changed").exists()
 
 
-def test_only_the_ro_zone_can_sign(waiting: Application) -> None:
+def test_only_core_can_relay_an_ro_decision(waiting: Application) -> None:
     with pytest.raises(RejectEvent):
-        process(from_ro(waiting, "signature.granted", signer=SIGNER), "core-to-o1")
+        process(from_ro(waiting, "signature.granted", signer=SIGNER), "ro-to-o1")
     waiting.refresh_from_db()
     assert waiting.status == "awaiting_signature"
 
@@ -175,22 +167,17 @@ def test_only_the_ro_zone_can_sign(waiting: Application) -> None:
 def test_decline_ends_the_application_with_the_reason(waiting: Application) -> None:
     process(
         from_ro(waiting, "signature.declined", signer=SIGNER, reason="Not employed here."),
-        "ro-to-o1",
+        "core-to-o1",
     )
     waiting.refresh_from_db()
     assert (waiting.status, waiting.signature_note) == ("ro_declined", "Not employed here.")
-    changed = OutboxEvent.objects.get(type="application.status_changed")
-    assert changed.payload == {
-        "application_id": str(waiting.public_id),
-        "status": "ro_declined",
-        "seq": 2,
-        "reason": "Not employed here.",
-    }
+    assert waiting.seq == 1
+    assert not OutboxEvent.objects.filter(type="application.status_changed").exists()
 
 
 def test_decline_needs_a_reason(waiting: Application) -> None:
     with pytest.raises(RejectEvent):
-        process(from_ro(waiting, "signature.declined", signer=SIGNER, reason=""), "ro-to-o1")
+        process(from_ro(waiting, "signature.declined", signer=SIGNER, reason=""), "core-to-o1")
 
 
 def test_signature_for_an_unknown_application_is_rejected(db: None) -> None:
@@ -200,10 +187,10 @@ def test_signature_for_an_unknown_application_is_rejected(db: None) -> None:
         application_id=uuid.uuid4(),
     ).to_json()
     with pytest.raises(RejectEvent):
-        process(body, "ro-to-o1")
+        process(body, "core-to-o1")
 
 
-def test_overdue_requests_expire_and_late_signatures_are_ignored(
+def test_core_decision_reconciles_a_locally_expired_application(
     waiting: Application, grant: Grant
 ) -> None:
     assert services.expire_signatures(grant.signature_deadline) == 0
@@ -215,11 +202,12 @@ def test_overdue_requests_expire_and_late_signatures_are_ignored(
     assert (
         OutboxEvent.objects.get(type="application.status_changed").payload["status"] == "ro_expired"
     )
-    # The organisation signed just before it heard about the expiry: dropped, no events.
+    # Core accepted the decision before the expiry reached it, so its relay wins and
+    # brings the org back into agreement with core.
     before = OutboxEvent.objects.count()
-    process(from_ro(waiting, "signature.granted", signer=SIGNER), "ro-to-o1")
+    process(from_ro(waiting, "signature.granted", signer=SIGNER), "core-to-o1")
     waiting.refresh_from_db()
-    assert waiting.status == "ro_expired" and OutboxEvent.objects.count() == before
+    assert waiting.status == "received" and OutboxEvent.objects.count() == before
 
 
 def test_moving_the_signature_deadline_updates_open_requests(

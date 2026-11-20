@@ -402,7 +402,8 @@ services:
     networks: [edge, o5_net]
 
   # The research organisation site: one site and database for every organisation in
-  # the directory. Its worker talks only to the orgs (o1-to-ro, ro-to-o1, ...).
+  # the directory. Its worker receives org requests and sends decisions to core for
+  # authenticated relay to the org (o1-to-ro, ro-to-core, ...).
   ro-web:
     <<: *web
     env_file: env/ro.env

@@ -162,6 +162,36 @@ def test_reviewer_sees_assigned_applications_only(
         assert marker not in page.content, marker
 
 
+def test_latest_assessments_respect_the_viewers_application_assignments(
+    make_grant: Any,
+    make_panel: Any,
+    make_application: Any,
+    make_seat: Any,
+    assign: Any,
+    make_task: Any,
+    seat_client: Any,
+) -> None:
+    s = _setup(make_grant, make_panel, make_application, make_seat, assign)
+    assign(s["external"], s["unassigned_app"])
+    Assessment.objects.create(
+        member=s["external"],
+        application=s["unassigned_app"],
+        assessment="UNASSIGNED-ASSESSMENT-MARKER",
+        preliminary_statement="Do not disclose",
+        preliminary_grade=3,
+    )
+    make_task(s["panel"], PanelTask.Kind.ASSESSMENT, ended=True)
+    panel_url = f"/panels/{s['panel'].pk}/"
+
+    reviewer_page = seat_client(s["reviewer"]).get(panel_url).content
+    assert b"Nobody Assigned" not in reviewer_page
+    assert b"UNASSIGNED-ASSESSMENT-MARKER" not in reviewer_page
+
+    chair_page = seat_client(s["chair"]).get(panel_url).content
+    assert b"Nobody Assigned" in chair_page
+    assert b"UNASSIGNED-ASSESSMENT-MARKER" in chair_page
+
+
 def test_documents_download_for_visible_applications_only(
     make_grant: Any,
     make_panel: Any,

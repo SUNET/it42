@@ -11,8 +11,8 @@ from .routing import sender_of
 
 logger = logging.getLogger(__name__)
 
-# handler(envelope, sender) where sender is an org slug (in the core and the RO zone) or
-# "core" / "ro" (in an org); see routing.sender_of.
+# handler(envelope, sender) where sender is an org slug or "ro" in core, an org slug in
+# the RO zone, and "core" / "ro" in an org; see routing.sender_of.
 Handler = Callable[[Envelope, str], None]
 _HANDLERS: dict[tuple[str, int], Handler] = {}
 

@@ -3,10 +3,10 @@
 
 Every org gets two quorum queues to and from the core and two to and from the
 research organisation (RO) zone, one per direction, each fed by a direct exchange
-with the same name. The core and the RO zone have no link. Users may write only to
-their outbound exchanges and read only from their inbound queues, and nobody may
-configure anything, so the default exchange (which can route to any queue by name)
-is never writable.
+with the same name. The RO has one additional outbound flow to core for independently
+authenticated signing decisions. Users may write only to their outbound exchanges
+and read only from their inbound queues, and nobody may configure anything, so the
+default exchange (which can route to any queue by name) is never writable.
 
 Run from the repository root:  python3 scripts/gen-rabbit-defs.py
 """
@@ -112,6 +112,7 @@ def build(env_dir: Path) -> dict[str, Any]:
         for org in ORGS
         for name in (f"core-to-{org}", f"{org}-to-core", f"{org}-to-{RO}", f"{RO}-to-{org}")
     ]
+    flows.append(f"{RO}-to-core")
 
     return {
         "rabbit_version": "4.3.6",
@@ -126,7 +127,7 @@ def build(env_dir: Path) -> dict[str, Any]:
                 "core",
                 "^$",
                 exactly([f"core-to-{o}" for o in ORGS]),
-                exactly([f"{o}-to-core" for o in ORGS]),
+                exactly([*(f"{o}-to-core" for o in ORGS), f"{RO}-to-core"]),
             ),
             *(
                 permission(
@@ -140,7 +141,7 @@ def build(env_dir: Path) -> dict[str, Any]:
             permission(
                 RO,
                 "^$",
-                exactly([f"{RO}-to-{o}" for o in ORGS]),
+                exactly([*(f"{RO}-to-{o}" for o in ORGS), f"{RO}-to-core"]),
                 exactly([f"{o}-to-{RO}" for o in ORGS]),
             ),
         ],

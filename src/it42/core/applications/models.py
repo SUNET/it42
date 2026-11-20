@@ -24,7 +24,7 @@ class ApplicationCopy(models.Model):
         default=ApplicationStatus.SUBMITTED,
     )
     # The administrating organisation named in the answers (research_orgs slug, "" for
-    # none) and its decision as the org reported it.
+    # none) and the applicant-visible part of its RO-authenticated decision.
     research_org = models.SlugField(max_length=32, blank=True)
     signed_by = models.CharField(max_length=200, blank=True)
     signed_at = models.DateTimeField(null=True, blank=True)
