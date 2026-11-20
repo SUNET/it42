@@ -6,7 +6,11 @@
 @media (max-width: 1199.98px) { .fb { grid-template-columns: 1fr; } }
 
 /* ---- Left panel ------------------------------------------------------------------------ */
-.fb-side { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 32px); padding: 20px; border-radius: var(--it-radius-24); background: var(--it-role-3); }
+.fb-side { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: var(--it-radius-24); background: var(--it-role-3); }
+@media screen and (min-width: 1200px) {
+  .it-app-content:has(> .fb) { container-type: size; }
+  .fb-side { max-height: calc(100cqh - 32px); }
+}
 @media (max-width: 1199.98px) { .fb-side { position: static; max-height: none; } }
 .fb-back { display: inline-flex; align-items: center; gap: 4px; color: var(--it-black-40); text-decoration: none; font: 400 var(--it-text-14) var(--it-font-sans); }
 .fb-back .it-icon { width: 14px; height: 14px; }
