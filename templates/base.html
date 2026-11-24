@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if request.META.IT42_BOARD_CARD %}<base target="_top">{% endif %}
   <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   {% block site_css %}{% endblock %}
@@ -33,7 +34,7 @@
   {% endblock %}
   {% block extra_head %}{% endblock %}
 </head>
-<body class="{% block body_class %}bg-body-tertiary{% endblock %}">
+<body class="{% if request.META.IT42_BOARD_CARD %}it-card-frame {% endif %}{% block body_class %}bg-body-tertiary{% endblock %}">
 {% block body %}
 <nav class="navbar navbar-expand-md {% if THEME_IS_LIGHT %}navbar-light{% else %}navbar-dark{% endif %} navbar-site mb-4" data-bs-theme="{% if THEME_IS_LIGHT %}light{% else %}dark{% endif %}">
   <div class="container">

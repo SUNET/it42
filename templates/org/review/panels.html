@@ -12,7 +12,7 @@
 </div>
 <div class="it-panel-grid">
   {% for panel in panels %}
-    <a class="it-panel-card it-panel-card-link" href="{% url 'panel_detail' panel.pk %}">
+    <a class="it-panel-card it-panel-card-link" data-board-card href="{% url 'panel_detail' panel.pk %}">
       <h2 class="it-panel-card-title">{{ panel.name }}</h2>
       <p class="it-panel-card-sub">{{ panel.seat_count }} seat{{ panel.seat_count|pluralize }} · {{ panel.grant_count }} grant{{ panel.grant_count|pluralize }}</p>
       {% if panel.description %}<p class="it-card-note">{{ panel.description|truncatewords:24 }}</p>{% endif %}

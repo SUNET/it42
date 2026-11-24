@@ -125,7 +125,8 @@
         event.preventDefault();
         const option = shown.matches[active];
         pick(option.value ? option : null);
-      } else if (event.key === "Escape") {
+      } else if (event.key === "Escape" && !list.hidden) {
+        event.preventDefault(); // The first Escape belongs to the open option list.
         input.value = current();
         close();
       }

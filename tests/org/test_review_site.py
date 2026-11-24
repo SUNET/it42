@@ -4,6 +4,7 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
+import pytest
 from django.test import Client
 from django.utils import timezone
 
@@ -15,7 +16,9 @@ from it42.org.review.models import (
     Meeting,
     PanelMember,
     PanelTask,
+    ReviewerNote,
 )
+from tests.board_browser import board_browser
 
 PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
 
@@ -477,3 +480,89 @@ def test_logged_out_page_uses_the_reviewer_design(review_site: None, db: None) -
     response = Client().get("/logged-out/")
     assert response.status_code == 200
     assert b"You have been logged out" in response.content and b"it-reviewer" in response.content
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reviewer_opens_panel_over_board(make_panel, make_seat, seat_client) -> None:
+    """The reviewer's panel keeps its own contents and the board underneath."""
+    panel = make_panel("Research panel")
+    client = seat_client(make_seat(panel, "r1@example.org"))
+    with board_browser(client) as page:
+        page.goto("/")
+        page.get_by_role("link", name="Open Research panel").click()
+        dialog = page.get_by_role("dialog")
+        dialog.frame_locator("iframe").get_by_role(
+            "heading", name="Research panel"
+        ).first.wait_for()
+        page.get_by_role("button", name="Close card").click()
+        dialog.wait_for(state="hidden")
+        assert page.get_by_role("heading", name="My review panels").is_visible()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", [PanelTask.Kind.ASSESSMENT, PanelTask.Kind.FINAL])
+def test_review_card_protects_unsaved_text(
+    kind, make_grant, make_panel, make_application, make_seat, assign, make_task, seat_client
+) -> None:
+    s = _setup(make_grant, make_panel, make_application, make_seat, assign)
+    panel = s["panel"]
+    final = kind == PanelTask.Kind.FINAL
+    if final:
+        make_task(panel, PanelTask.Kind.ASSESSMENT, ended=True)
+    make_task(panel, kind)
+    with board_browser(seat_client(s["chair" if final else "reviewer"])) as page:
+        page.goto(f"/panels/{panel.pk}/")
+        page.locator(f'a[data-board-card][href="{s["url"]}"]').last.click()
+        dialog = page.get_by_role("dialog")
+        frame = dialog.frame_locator("iframe")
+        if final:
+            frame.get_by_role("tab", name="Final statement").click()
+        section = "#final-statement" if final else "#assessment"
+        field = frame.locator(f"{section} textarea").first
+        original = field.input_value()
+        field.fill("Work in progress")
+        page.once("dialog", lambda prompt: prompt.dismiss())
+        page.mouse.click(2, 2)
+        assert dialog.is_visible()
+        assert field.input_value() == "Work in progress"
+        field.fill(original)
+        field.press("Escape")
+        dialog.wait_for(state="hidden")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_saving_note_guards_unsaved_assessment(
+    make_grant, make_panel, make_application, make_seat, assign, make_task, seat_client
+) -> None:
+    s = _setup(make_grant, make_panel, make_application, make_seat, assign)
+    panel = s["panel"]
+    make_task(panel, PanelTask.Kind.ASSESSMENT)
+    with board_browser(seat_client(s["reviewer"])) as page:
+        page.goto(f"/panels/{panel.pk}/")
+        page.locator(f'a[data-board-card][href="{s["url"]}"]').last.click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        assessment = frame.locator('textarea[name="assessment"]')
+        assessment.fill("Assessment in progress")
+        frame.get_by_role("tab", name="My notes").click()
+        note = frame.get_by_role("textbox", name="Private note")
+        note.fill("Private reminder")
+        save_note = frame.get_by_role("button", name="Save note")
+        with page.expect_event("dialog", timeout=5000) as warning:
+            page.once("dialog", lambda prompt: prompt.dismiss())
+            save_note.click()
+        assert warning.value.type == "beforeunload"
+        assert assessment.input_value() == "Assessment in progress"
+        assert note.input_value() == "Private reminder"
+        # With the assessment reverted, the cancelled submission's note is still dirty.
+        assessment.fill("")
+        with page.expect_event("dialog", timeout=5000):
+            page.once("dialog", lambda prompt: prompt.dismiss())
+            page.evaluate("location.reload()")
+        assert note.input_value() == "Private reminder"
+        assessment.fill("Assessment in progress")
+        with page.expect_event("dialog", timeout=5000):
+            page.once("dialog", lambda prompt: prompt.accept())
+            save_note.click()
+        page.wait_for_url(f"**{s['url']}#notes")
+    assert ReviewerNote.objects.get().text == "Private reminder"
+    assert not Assessment.objects.exists()

@@ -57,8 +57,9 @@
     link.href = next ? "#" + next.id : "#application-form";
   }
   function changed(event) {
-    if (leaving || event.target.closest("dialog") || event.target.name === "confirm") return;
+    if (event.target.closest("dialog") || event.target.name === "confirm") return;
     revision++;
+    if (leaving) return; // The final POST will include edits made while it waits for autosave.
     progress();
     status("Unsaved changes");
     clearTimeout(timer);
@@ -84,7 +85,11 @@
     await inFlight; inFlight = null;
   }
   form.addEventListener("input", changed);
-  form.addEventListener("change", changed);
+  // The enhanced select emits a change event. Native text changes already emitted input,
+  // and their later blur must not mark an autosaved draft as dirty again.
+  form.addEventListener("change", event => {
+    if (event.target.matches("select")) changed(event);
+  });
   // Wait for any older autosave before the final POST so it cannot recreate a submitted draft.
   form.addEventListener("submit", async event => {
     if (leaving) return;
@@ -96,9 +101,15 @@
     if (inFlight) await inFlight;
     form.requestSubmit(button);
   });
-  window.addEventListener("beforeunload", event => {
-    if (!leaving && savedRevision < revision) { event.preventDefault(); event.returnValue = ""; }
-  });
+  // A pending final POST can navigate, but removing its frame would cancel that POST.
+  function guardUnsaved(event) {
+    if (savedRevision < revision && (event.type === "it42-card-dismiss" || !leaving)) {
+      event.preventDefault();
+      if (event.type === "beforeunload") event.returnValue = "";
+    }
+  }
+  window.addEventListener("beforeunload", guardUnsaved);
+  document.addEventListener("it42-card-dismiss", guardUnsaved);
   window.addEventListener("pageshow", () => { leaving = false; });
   setInterval(() => {
     if (savedAt && savedRevision === revision && !inFlight) {

@@ -13,7 +13,7 @@ from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from it42.common.http import post_required
+from it42.common.http import board_card, post_required
 from it42.org.applications.models import Application
 from it42.org.grants.models import Grant
 from it42.org.members.access import admin_required, membership_of
@@ -79,6 +79,7 @@ def panel_delete(request: HttpRequest, panel_id: int) -> HttpResponse:
     return redirect("panel_list")
 
 
+@board_card
 def panel_detail(request: HttpRequest, panel_id: int) -> HttpResponse:
     panel = _panel(panel_id)
     now = timezone.now()
@@ -324,6 +325,7 @@ def _panel_application(panel_id: int, application_id: int) -> tuple[Panel, Appli
     return panel, application
 
 
+@board_card
 def panel_application(request: HttpRequest, panel_id: int, application_id: int) -> HttpResponse:
     panel, application = _panel_application(panel_id, application_id)
     now = timezone.now()

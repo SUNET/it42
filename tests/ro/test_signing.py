@@ -13,6 +13,7 @@ from it42.common.inbox import process
 from it42.common.models import OutboxEvent
 from it42.common.routing import inbound_queues, sender_of
 from it42.ro.signing.models import RequestDocument, SignatureRequest
+from tests.board_browser import board_browser, check_unsaved_card_text
 
 from .conftest import PDF, requested
 
@@ -165,3 +166,45 @@ def test_unknown_signature_event_types_are_rejected(db: None) -> None:
     body = Envelope(type="signature.granted", payload={}, application_id=uuid.uuid4()).to_json()
     with pytest.raises(RejectEvent):
         process(body, "o1-to-ro")
+
+
+def test_signature_card_enforces_membership(
+    kth_signer: Client, uu_signer: Client, kth_request: SignatureRequest
+) -> None:
+    """Embedding the signature form uses the same organisation boundary as opening it directly."""
+    path = f"/requests/{kth_request.pk}/?board_card=1"
+    headers = {"Sec-Fetch-Dest": "iframe", "Sec-Fetch-Site": "same-origin"}
+    permitted = kth_signer.get(path, headers=headers)
+    assert permitted.status_code == 200 and b"data-sign-form" in permitted.content
+    assert permitted.headers["X-Frame-Options"] == "SAMEORIGIN"
+    denied = uu_signer.get(path, headers=headers)
+    assert denied.status_code == 404 and denied.headers["X-Frame-Options"] == "DENY"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_signer_opens_request_over_board(kth_signer, kth_request) -> None:
+    """The card presents the authorised sign-off form in place on the signer's board."""
+    with board_browser(kth_signer) as page:
+        page.goto("/")
+        page.locator("a[data-board-card]").click()
+        dialog = page.get_by_role("dialog")
+        dialog.frame_locator("iframe").get_by_role("button", name="Sign", exact=True).wait_for()
+        page.get_by_role("button", name="Close card").click()
+        dialog.wait_for(state="hidden")
+        assert page.get_by_role("heading", name="Applications from your researchers").is_visible()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("field_name", ["comment", "reason"])
+def test_signature_card_protects_unsaved_text(kth_signer, kth_request, field_name) -> None:
+    with board_browser(kth_signer) as page:
+        page.goto("/")
+        page.locator("a[data-board-card]").click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        if field_name == "reason":
+            frame.get_by_text("Decline instead", exact=True).click()
+        field = frame.locator(f'textarea[name="{field_name}"]')
+        close = page.get_by_role("button", name="Close card")
+        check_unsaved_card_text(page, field, close.click)
+    kth_request.refresh_from_db()
+    assert kth_request.status == "pending"

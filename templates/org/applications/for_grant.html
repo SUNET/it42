@@ -57,7 +57,7 @@ assessments are in. No AI score: the platform has none.
           </td>
           <td><span data-status="{{ app.status }}">{% status_pill app.status %}</span></td>
           <td><span class="it-meta">{{ app.submitted_at|date:"j M Y" }}</span></td>
-          <td class="text-end"><a class="it-row-link" href="{% url 'application_detail' app.pk %}" aria-label="Open the application of {{ app.applicant_name }}">{% icon "caret-right" %}</a></td>
+          <td class="text-end"><a class="it-row-link" data-board-card href="{% url 'application_detail' app.pk %}" aria-label="Open the application of {{ app.applicant_name }}">{% icon "caret-right" %}</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="it-files-empty">{% if current %}No applications with this status.{% else %}No applications yet.{% endif %}</td></tr>

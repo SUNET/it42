@@ -142,7 +142,7 @@
                 <p class="it-message-a">{{ q.answer|linebreaksbr }}</p>
                 <time datetime="{{ q.answered_at|date:'c' }}">You answered {{ q.answered_at|date:"j M Y, H:i" }}</time>
               {% else %}
-                <form method="post" action="{% url 'answer_question' q.pk %}" class="it-composer">{% csrf_token %}
+                <form data-guard-card-edits method="post" action="{% url 'answer_question' q.pk %}" class="it-composer">{% csrf_token %}
                   <label class="form-label visually-hidden" for="answer-{{ q.pk }}">Your answer</label>
                   <textarea class="form-control" id="answer-{{ q.pk }}" name="answer" rows="2" maxlength="5000" required placeholder="Reply to {{ application.grant.org_name }}…"></textarea>
                   <button class="btn btn-applicant" type="submit">Send answer</button>

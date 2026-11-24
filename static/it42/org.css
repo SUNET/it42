@@ -393,3 +393,7 @@
 .it-archive-filters a { background: var(--it-black-4); color: var(--it-black-100); border-radius: 100px; }
 .it-archive-filters a[aria-current] { background: var(--it-black-100); color: var(--it-white-100); }
 .it-archive-filters a[aria-current] .it-segment-count { color: inherit; }
+
+/* The panel title opens the whole reviewer card. Keep its explicit Open link reachable. */
+.it-panel-card-title a[data-board-card]::after { content: ""; position: absolute; inset: 0; }
+.it-panel-card-foot a[data-board-card] { position: relative; }

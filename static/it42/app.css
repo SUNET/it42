@@ -602,3 +602,40 @@
 .it-budget-add { align-self: flex-start; }
 .it-wordcount { text-align: right; }
 .it-wordcount.is-over { color: var(--it-secondary-red); }
+
+/* Board card overlay (Granter · States & flows): the backdrop covers the whole shell. */
+.it-board-dialog {
+  width: min(1360px, calc(100% - 48px)); height: min(880px, calc(100dvh - 48px));
+  max-width: none; max-height: none; padding: 0; margin: auto; border: 0;
+  border-radius: var(--it-radius-24); background: var(--it-white-100);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 20%); overflow: hidden;
+}
+.it-board-dialog::backdrop { background: rgb(0 0 0 / 30%); }
+.it-board-dialog.is-expanded { width: 100%; height: 100dvh; border-radius: 0; }
+.it-board-dialog iframe { display: block; width: 100%; height: 100%; border: 0; }
+.it-board-dialog iframe[hidden] { display: none; }
+.it-board-dialog-actions {
+  position: absolute; z-index: 1; top: 10px; right: 12px; display: flex; gap: 2px;
+  padding: 2px; border-radius: var(--it-radius-12); background: var(--it-white-100);
+}
+.it-board-dialog-actions button { width: 32px; height: 32px; border: 0; }
+.it-board-dialog.is-expanded [data-card-expand] .it-icon { transform: rotate(180deg); }
+.it-card-loading, .it-card-error { position: absolute; inset: 60px 24px auto; text-align: center; }
+
+/* Only the detail content belongs inside the frame; the board provides the navigation. */
+.it-card-frame .it-app > aside, .it-card-frame .it-topbar { display: none; }
+.it-card-frame .it-app-content { padding-top: 56px; }
+.it-card-frame .it-app-content:has(> .it-detail-card) { padding: 0; }
+.it-card-frame .it-detail-card { min-height: 100%; border: 0; border-radius: 0; box-shadow: none; }
+.it-card-frame .it-detail-main > .it-tabs { padding-right: 76px; }
+.it-card-frame .it-detail-main:not(:has(> .it-tabs)) { padding-top: 54px; }
+.it-card-frame .it-messages { padding: 52px 16px 0; }
+@media (min-width: 1200px) {
+  .it-card-frame .it-detail-body { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+@media (max-width: 991.98px) {
+  .it-card-frame .it-infobar { padding-top: 52px; }
+}
+@media (max-width: 575.98px) {
+  .it-board-dialog { width: calc(100% - 16px); height: calc(100dvh - 24px); border-radius: var(--it-radius-16); }
+}

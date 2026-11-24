@@ -17,7 +17,7 @@ from it42.common.formschema import (
     answers_to_json,
     labelled_answers,
 )
-from it42.common.http import post_required
+from it42.common.http import board_card, post_required
 from it42.common.statuses import ENDED_BEFORE_REVIEW, ApplicationStatus
 from it42.core.accounts.models import User
 from it42.core.catalog.models import PublicGrant
@@ -45,6 +45,7 @@ def raw_values(form: forms.BaseForm, data: QueryDict) -> dict[str, Any]:
 
 
 @login_required
+@board_card
 def apply(request: HttpRequest, org_slug: str, grant_id: str) -> HttpResponse:
     grant = get_object_or_404(PublicGrant, org_slug=org_slug, grant_public_id=grant_id)
     user = _user(request)
@@ -358,6 +359,7 @@ def application_activity(
 
 
 @login_required
+@board_card
 def my_application(request: HttpRequest, public_id: str) -> HttpResponse:
     application = get_object_or_404(
         ApplicationCopy.objects.select_related("grant"), public_id=public_id, user=_user(request)

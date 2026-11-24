@@ -40,7 +40,7 @@
                 {% if grant.status == "draft" %}{% include "includes/status_pill.html" with tone="grey" label="Unpublished" %}{% elif grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}
                 {% if grant.today_count %}<span class="it-pill-today">+{{ grant.today_count }} today</span>{% endif %}
               </div>
-              <h3><a href="{% if grant.status == 'draft' %}{% if is_org_admin %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_list' %}{% endif %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
+              <h3><a data-board-card href="{% if grant.status == 'draft' and is_org_admin %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
               {% if grant.status == "draft" %}
               <div class="it-app-card-grant">
                 {% icon "hand-coins" %}
@@ -70,7 +70,7 @@
               <div class="it-app-card-top">
                 <span data-status="{{ app.status }}">{% status_pill app.status %}</span>
               </div>
-              <h3><a href="{% url 'application_detail' app.pk %}">{{ app.applicant_name }}</a></h3>
+              <h3><a data-board-card href="{% url 'application_detail' app.pk %}">{{ app.applicant_name }}</a></h3>
               <div class="it-app-card-grant">
                 {% icon "hand-coins" %}
                 <div><strong>{{ app.grant.title }}</strong><span>{{ app.applicant_email|default:"Grant call" }}</span></div>

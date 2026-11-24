@@ -15,7 +15,7 @@
       <section id="declaration" class="it-infobar-section">
         <h2 class="it-label">Conflict of interest and competence</h2>
         {% if declaration_form %}
-          <form method="post" action="{% url 'review_declare' panel.pk application.pk %}" class="it-infobar-form">{% csrf_token %}
+          <form data-guard-card-edits method="post" action="{% url 'review_declare' panel.pk application.pk %}" class="it-infobar-form">{% csrf_token %}
             {% with form=declaration_form %}
               <div class="form-check">
                 {{ form.in_conflict }}
@@ -45,7 +45,7 @@
       <section id="assessment" class="it-infobar-section">
         <h2 class="it-label">My assessment and preliminary statement</h2>
         {% if assessment_form %}
-          <form method="post" action="{% url 'review_assess' panel.pk application.pk %}" class="it-infobar-form">{% csrf_token %}
+          <form data-guard-card-edits method="post" action="{% url 'review_assess' panel.pk application.pk %}" class="it-infobar-form">{% csrf_token %}
             {% with form=assessment_form %}
               {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
               {% include "org/review/_grade.html" with field=form.preliminary_grade label=form.preliminary_grade.label %}
@@ -202,7 +202,7 @@
         <div class="it-block">
           <h2>Final statement</h2>
           {% if final_form %}
-            <form method="post" action="{% url 'review_final' panel.pk application.pk %}" class="it-final-form">{% csrf_token %}
+            <form data-guard-card-edits method="post" action="{% url 'review_final' panel.pk application.pk %}" class="it-final-form">{% csrf_token %}
               {% if final_form.non_field_errors %}<div class="alert alert-danger">{{ final_form.non_field_errors|join:" " }}</div>{% endif %}
               {% for label, text, grade in final_form.sections %}
                 <fieldset class="it-final-section">
@@ -225,7 +225,7 @@
     <section class="it-tabpanel" id="notes" role="tabpanel" aria-label="My notes">
       <div class="it-detail-body">
         <div class="it-stack">
-          <form method="post" action="{% url 'review_note' panel.pk application.pk %}" class="it-composer">{% csrf_token %}
+          <form data-guard-card-edits method="post" action="{% url 'review_note' panel.pk application.pk %}" class="it-composer">{% csrf_token %}
             <label class="visually-hidden" for="note-text">Private note</label>
             <textarea class="form-control" id="note-text" name="text" rows="1" maxlength="5000" required placeholder="Add a private note…"></textarea>
             <button class="btn btn-primary" type="submit">Save note</button>

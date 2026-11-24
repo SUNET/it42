@@ -8,12 +8,14 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 
 from it42.common.events import Envelope, RejectEvent
+from it42.common.formschema import BASE_FIELDS
 from it42.common.inbox import process
 from it42.common.models import OutboxEvent
 from it42.core.accounts.models import User
 from it42.core.applications.models import ApplicationCopy, ApplicationDraft, StatusChange
 from it42.core.catalog.models import PublicGrant
 from it42.core.profiles.models import Document
+from tests.board_browser import board_browser
 
 from .conftest import PDF
 
@@ -497,3 +499,78 @@ def test_application_uses_numbered_questions_with_separate_identity(
     body = response.content.decode()
     assert "data-progress-count" in body and "it42/application-form.js" in body
     assert "1. Your name" not in body
+
+
+@pytest.mark.django_db(transaction=True)
+def test_draft_card_saves_answers_inside_board(u2_client, a2, make_grant) -> None:
+    """The embedded editor autosaves to the application and protects a dirty draft on dismissal."""
+    grant = make_grant()
+    draft = ApplicationDraft.objects.create(user=a2, grant=grant)
+    with board_browser(u2_client) as page:
+        page.goto("/my/applications/")
+        page.locator("a[data-board-card]").click()
+        dialog = page.get_by_role("dialog")
+        field = dialog.frame_locator("iframe").locator('[name="project_title"]')
+        field.fill("Saved inside card")
+        page.once("dialog", lambda prompt: prompt.dismiss())
+        field.press("Escape")
+        assert dialog.is_visible()
+        dialog.frame_locator("iframe").get_by_text("Saved just now", exact=True).first.wait_for()
+        page.get_by_role("button", name="Close card").click()
+        dialog.wait_for(state="hidden")
+    draft.refresh_from_db()
+    assert draft.data["project_title"] == "Saved inside card"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_close_card_while_save_draft_waits_for_autosave(u2_client, a2, make_grant) -> None:
+    grant = make_grant()
+    draft = ApplicationDraft.objects.create(user=a2, grant=grant)
+    with board_browser(u2_client) as page:
+        page.goto("/my/applications/")
+        page.locator("a[data-board-card]").click()
+        dialog = page.get_by_role("dialog")
+        frame = dialog.frame_locator("iframe")
+        title = frame.locator('[name="project_title"]')
+        title.wait_for()
+        pending = []
+
+        def hold_autosave(route):
+            if route.request.method == "POST" and route.request.resource_type == "fetch":
+                pending.append(route)
+            else:
+                route.continue_()
+
+        page.route("**/apply/**", hold_autosave)
+        with page.expect_request(lambda req: req.method == "POST" and req.resource_type == "fetch"):
+            title.fill("Earlier answer")
+        title.fill("Latest answer")
+        frame.get_by_role("button", name="Save draft").click()
+        page.once("dialog", lambda prompt: prompt.dismiss())
+        page.get_by_role("button", name="Close card").click()
+        assert dialog.is_visible()
+        assert title.input_value() == "Latest answer"
+        pending[0].continue_()
+        page.wait_for_url("**/apply/")
+    draft.refresh_from_db()
+    assert draft.data["project_title"] == "Latest answer"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_escape_closes_organisation_list_before_card(u2_client, a2, make_grant) -> None:
+    grant = make_grant(form_schema=BASE_FIELDS)
+    ApplicationDraft.objects.create(user=a2, grant=grant)
+    with board_browser(u2_client) as page:
+        page.goto("/my/applications/")
+        page.locator("a[data-board-card]").click()
+        dialog = page.get_by_role("dialog")
+        frame = dialog.frame_locator("iframe")
+        frame.get_by_text("Applying as", exact=False).click()
+        organisation = frame.get_by_role("combobox")
+        organisation.focus()
+        assert organisation.get_attribute("aria-expanded") == "true"
+        organisation.press("Escape")
+        assert dialog.is_visible()
+        assert organisation.get_attribute("aria-expanded") == "false"
+        organisation.press("Escape")
+        dialog.wait_for(state="hidden")

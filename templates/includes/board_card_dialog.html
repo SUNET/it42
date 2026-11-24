@@ -1,0 +1,9 @@
+{% load it42 %}
+<dialog class="it-board-dialog" aria-label="Card details">
+  <div class="it-board-dialog-actions">
+    <button type="button" class="it-icon-btn" data-card-expand aria-label="Expand card" title="Expand card" aria-pressed="false">{% icon "arrow-up-right" %}</button>
+    <button type="button" class="it-icon-btn" data-card-close aria-label="Close card" title="Close card" autofocus>{% icon "x" %}</button>
+  </div>
+  <p class="it-card-loading" role="status">Loading card…</p>
+  <p class="it-card-error" hidden>The card could not be displayed. <a>Open the full page</a></p>
+</dialog>

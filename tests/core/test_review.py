@@ -12,6 +12,7 @@ from it42.common.models import OutboxEvent
 from it42.core.accounts.models import User
 from it42.core.applications.models import ApplicationCopy, QuestionCopy, StatusChange
 from it42.core.catalog.models import PublicGrant
+from tests.board_browser import board_browser, check_unsaved_card_text
 
 
 @pytest.fixture
@@ -123,6 +124,42 @@ def test_question_is_stored_and_answer_goes_back(
     question.refresh_from_db()
     assert question.answer == "40% hardware"
     assert OutboxEvent.objects.count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reply_card_protects_unsaved_text(g1_app: ApplicationCopy, u2_client: Client) -> None:
+    process(question_asked(g1_app, 2), "o1-to-core")
+    with board_browser(u2_client) as page:
+        page.goto("/my/applications/")
+        page.locator("a[data-board-card]").click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        frame.get_by_role("tab", name="Messages").click()
+        reply = frame.get_by_role("textbox", name="Your answer")
+        check_unsaved_card_text(page, reply, lambda: reply.press("Escape"))
+    assert QuestionCopy.objects.get().answered_at is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reply_card_guards_call_link_but_allows_sending_reply(g1_app, u2_client) -> None:
+    process(question_asked(g1_app, 2), "o1-to-core")
+    with board_browser(u2_client) as page:
+        page.goto("/my/applications/")
+        page.locator("a[data-board-card]").click()
+        frame = page.get_by_role("dialog").frame_locator("iframe")
+        messages = frame.get_by_role("tab", name="Messages")
+        messages.click()
+        reply = frame.get_by_role("textbox", name="Your answer")
+        reply.fill("Revised budget")
+        frame.get_by_role("tab", name="Grant details").click()
+        with page.expect_event("dialog", timeout=5000) as warning:
+            page.once("dialog", lambda prompt: prompt.dismiss())
+            frame.get_by_role("link", name="Open the call page").click()
+        assert warning.value.type == "beforeunload"
+        messages.click()
+        assert reply.input_value() == "Revised budget"
+        frame.get_by_role("button", name="Send answer").click()
+        page.wait_for_url(f"**/my/applications/{g1_app.public_id}/")
+    assert QuestionCopy.objects.get().answer == "Revised budget"
 
 
 def test_other_users_cannot_answer(g1_app: ApplicationCopy, make_user: Callable[..., User]) -> None:
