@@ -40,23 +40,45 @@ def _is_admin(request: HttpRequest) -> bool:
     return membership is not None and membership.is_admin
 
 
-def panel_list(request: HttpRequest) -> HttpResponse:
+def panel_list(request: HttpRequest, grant_id: int | None = None) -> HttpResponse:
+    """Open the panel directory, optionally to pick a panel for a call on the board."""
+    grant = (
+        get_object_or_404(Grant.objects.exclude(status=Grant.Status.DRAFT), pk=grant_id)
+        if grant_id
+        else None
+    )
     panels = Panel.objects.annotate(
         seat_count=Count("members", distinct=True), grant_count=Count("grants", distinct=True)
     )
-    return render(request, "org/review/panels.html", {"panels": panels})
+    linked = (
+        set(Panel.objects.filter(grants=grant).values_list("pk", flat=True)) if grant else set()
+    )
+    return render(
+        request, "org/review/panels.html", {"panels": panels, "grant": grant, "linked": linked}
+    )
 
 
 @admin_required
-def panel_create(request: HttpRequest) -> HttpResponse:
+def panel_create(request: HttpRequest, grant_id: int | None = None) -> HttpResponse:
+    """Create the panel and attach its originating call in one transaction."""
+    grant = (
+        get_object_or_404(Grant.objects.exclude(status=Grant.Status.DRAFT), pk=grant_id)
+        if grant_id
+        else None
+    )
     form = PanelForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         panel = form.save(commit=False)
         panel.created_by = request.user
-        panel.save()
-        messages.success(request, f"Panel “{panel.name}” created. Add seats and grants.")
+        with transaction.atomic():
+            panel.save()
+            if grant:
+                panel.grants.add(grant)
+        messages.success(request, f"Panel “{panel.name}” created.")
         return redirect("panel_detail", panel.pk)
-    return render(request, "org/review/panel_form.html", {"form": form, "panel": None})
+    return render(
+        request, "org/review/panel_form.html", {"form": form, "panel": None, "grant": grant}
+    )
 
 
 @admin_required

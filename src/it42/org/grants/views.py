@@ -30,103 +30,63 @@ from it42.common.formschema import (
     build_form,
 )
 from it42.common.http import board_card, post_required
-from it42.common.statuses import ENDED_BEFORE_REVIEW, NOT_REVIEWABLE, ApplicationStatus
+from it42.common.statuses import NOT_REVIEWABLE, ApplicationStatus
 from it42.common.theme import core_site_host
 from it42.org.applications.models import Application, Question
-from it42.org.members.access import admin_required
+from it42.org.members.access import admin_required, membership_of
 from it42.org.review.models import Assessment, Assignment, Meeting, PanelTask
 from it42.org.review.services import grant_panels
 
-from . import services
+from . import board, services
 from .forms import GrantForm, NameForm, SignatureDeadlineForm, clean_schema
 from .models import Category, Folder, FormTemplate, Grant, field_count
 from .templates import starting_template
 
-# Grant board columns (Dashboard / Granter): grants on the left, then the applications
-# by how far their review has come.
-BOARD_COLUMNS = [
-    ("draft", "Grant draft"),
-    ("published", "Grant published"),
-    ("signing", "Awaiting signature"),
-    ("submissions", "Submissions"),
-    ("assigned", "Reviewers assigned"),
-    ("review", "Review process"),
-    ("decided", "Granted / Declined"),
-]
-
-
-def _application_column(application: Application, assigned: int) -> str:
-    if application.status in ENDED_BEFORE_REVIEW:
-        return "decided"
-    match application.status:
-        case ApplicationStatus.AWAITING_SIGNATURE:
-            return "signing"
-        case ApplicationStatus.APPROVED | ApplicationStatus.REJECTED:
-            return "decided"
-        case ApplicationStatus.UNDER_REVIEW | ApplicationStatus.NEEDS_INFO:
-            return "review"
-    return "assigned" if assigned else "submissions"
-
 
 def dashboard(request: HttpRequest) -> HttpResponse:
-    today = timezone.localdate()
-    sort = "deadline" if request.GET.get("sort") == "deadline" else "recent"
-    grants = list(
-        Grant.objects.select_related("created_by").annotate(
-            application_count=Count("applications"),
-            today_count=Count("applications", filter=Q(applications__received_at__date=today)),
-        )
-    )
-    applications = list(
-        Application.objects.exclude(archive_at__lte=timezone.now())
-        .select_related("grant")
-        .annotate(
-            question_count=Count("questions", distinct=True),
-            open_questions=Count("questions", filter=Q(questions__answered_at=None), distinct=True),
-        )
-    )
-    assigned: dict[int, int] = defaultdict(int)
-    for application_id in Assignment.objects.values_list("application_id", flat=True):
-        assigned[application_id] += 1
-    if sort == "deadline":
-        grants.sort(key=lambda g: (g.deadline, g.title))
-        applications.sort(key=lambda a: (a.grant.deadline, a.applicant_name))
-    else:
-        grants.sort(key=lambda g: g.updated_at, reverse=True)
-        applications.sort(key=lambda a: a.updated_at, reverse=True)
-
-    cards: dict[str, list[dict[str, Any]]] = {key: [] for key, _ in BOARD_COLUMNS}
-    panels = grant_panels([g.pk for g in grants if g.status != Grant.Status.DRAFT])
-    for grant in grants:
-        key = "draft" if grant.status == Grant.Status.DRAFT else "published"
-        progress = panels.get(grant.pk, [])
-        cards[key].append(
-            {
-                "grant": grant,
-                "panels": len(progress),
-                "reviewers": sum(p.reviewers for p in progress),
-            }
-        )
-    for application in applications:
-        n = assigned[application.pk]
-        cards[_application_column(application, n)].append(
-            {"application": application, "assigned": n}
-        )
-    upcoming = [g.deadline for g in grants if g.status == Grant.Status.PUBLISHED]
-    next_deadline = min((d for d in upcoming if d >= today), default=None)
+    """Staff work queues, with the organisation's notifications and agenda alongside."""
+    membership = membership_of(request)
+    grants, context = board.board_context(request, bool(membership and membership.is_admin))
     return render(
         request,
         "org/dashboard.html",
         {
-            "columns": [
-                {"key": key, "title": title, "cards": cards[key]} for key, title in BOARD_COLUMNS
-            ],
-            "sort": sort,
-            "next_deadline": next_deadline,
+            **context,
             "feed": _feed(),
-            **agenda(today, org_deadlines(grants)),
+            **agenda(timezone.localdate(), org_deadlines(grants)),
         },
     )
+
+
+@post_required
+def board_action(request: HttpRequest) -> HttpResponse:
+    """Return to the same filtered board after an individual or bulk action."""
+    membership = membership_of(request)
+    assert membership is not None  # noqa: S101 (staff membership gate)
+    action = request.POST.get("action", "")
+    try:
+        services.change_board_items(
+            request.POST.getlist("card"),
+            action,
+            owner_id=membership.user.pk,
+            is_admin=membership.is_admin,
+            text=request.POST.get("note", "").strip(),
+            tag=request.POST.get("tag", ""),
+        )
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            {
+                "archive": "Archived.",
+                "pause": "Call paused on the board.",
+                "resume": "Call resumed.",
+                "tag": "Call tag updated.",
+                "note": "Personal note updated.",
+            }[action],
+        )
+    return redirect(reverse("home", query=request.GET))
 
 
 def archive(request: HttpRequest) -> HttpResponse:
@@ -346,7 +306,10 @@ def _save_grant(request: HttpRequest, grant: Grant | None) -> HttpResponse:
     saved = form.save(commit=False)
     if grant is None:
         saved.created_by = request.user
-    saved.save()
+        saved.save()
+    else:
+        # Write only builder fields so a concurrent board pause is preserved.
+        saved.save(update_fields=[*form.Meta.fields, "updated_at"])
     if action == "template" and name_form is not None:
         template = FormTemplate.objects.create(
             name=name_form.cleaned_data["name"],

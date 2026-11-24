@@ -1,0 +1,14 @@
+{% load it42 %}
+<details class="cb-card-menu">
+  <summary aria-label="Actions for {{ card.title }}" title="Card actions">{% icon "dots-three" %}</summary>
+  <form method="post" action="{% url 'board_action' %}{% querystring %}">
+    {% csrf_token %}<input type="hidden" name="card" value="{{ card.key }}">
+    <label>Note to self <textarea name="note" maxlength="2000" rows="2">{{ card.note }}</textarea></label>
+    <button type="submit" name="action" value="note">Save personal note</button>
+    {% if card.archivable %}<button type="submit" name="action" value="archive" data-archive-button>Archive application now</button>{% endif %}
+    {% if card.is_call and is_org_admin %}
+      {% if card.stage == 'paused' %}<button type="submit" name="action" value="resume">Resume call</button>
+      {% else %}<button type="submit" name="action" value="pause">Pause call on board</button>{% endif %}
+    {% endif %}
+  </form>
+</details>

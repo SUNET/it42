@@ -4,10 +4,11 @@
 {% block content %}
   <div class="it-card" style="max-width: 40rem">
     <h1 class="it-h1">{% if panel %}Edit panel{% else %}New review panel{% endif %}</h1>
+    {% if grant %}<p>Call · {{ grant.title }}</p>{% endif %}
     <form method="post">{% csrf_token %}
       {% include "includes/form_fields.html" %}
       <button class="btn btn-primary" type="submit">Save</button>
-      <a class="btn btn-link" href="{% if panel %}{% url 'panel_detail' panel.pk %}{% else %}{% url 'panel_list' %}{% endif %}">Cancel</a>
+      <a class="btn btn-link" href="{% if panel %}{% url 'panel_detail' panel.pk %}{% elif grant %}{% url 'call_panels' grant.pk %}{% else %}{% url 'panel_list' %}{% endif %}">Cancel</a>
     </form>
   </div>
 {% endblock %}

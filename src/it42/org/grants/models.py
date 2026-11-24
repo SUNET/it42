@@ -98,6 +98,8 @@ class Grant(models.Model):
     signature_deadline = models.DateField(blank=True)
     form_schema = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    # Staff can set a call aside on the board while its public lifecycle continues.
+    board_paused = models.BooleanField(default=False)
     folder = models.ForeignKey(
         Folder, null=True, blank=True, on_delete=models.SET_NULL, related_name="grants"
     )
@@ -129,3 +131,35 @@ class Grant(models.Model):
     def field_count(self) -> int:
         """Fields the org added to this grant's form ("6 fields" on the drafts page)."""
         return field_count(self.form_schema)
+
+
+class BoardNote(models.Model):
+    """A personal reminder attached to one organisation board record."""
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    grant = models.ForeignKey(Grant, null=True, on_delete=models.CASCADE, related_name="+")
+    application = models.ForeignKey(
+        "org_applications.Application", null=True, on_delete=models.CASCADE, related_name="+"
+    )
+    panel = models.ForeignKey(
+        "org_review.Panel", null=True, on_delete=models.CASCADE, related_name="+"
+    )
+    text = models.CharField(max_length=2000)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(grant__isnull=False, application__isnull=True, panel__isnull=True)
+                    | models.Q(grant__isnull=True, application__isnull=False, panel__isnull=True)
+                    | models.Q(grant__isnull=True, application__isnull=True, panel__isnull=False)
+                ),
+                name="board_note_one_target",
+            ),
+            models.UniqueConstraint(fields=["owner", "grant"], name="board_note_owner_grant"),
+            models.UniqueConstraint(fields=["owner", "application"], name="board_note_owner_app"),
+            models.UniqueConstraint(fields=["owner", "panel"], name="board_note_owner_panel"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Personal board note {self.pk}"

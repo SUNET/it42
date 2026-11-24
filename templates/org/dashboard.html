@@ -1,101 +1,148 @@
 {% extends "org/base.html" %}
-{% load it42 %}
-{% block title %}Grant board · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<li><a href="{% url 'grant_list' %}">Grants</a></li><li aria-current="page">Board</li>{% endblock %}
+{% load static it42 %}
+{% block title %}Call board · {{ SITE_NAME }}{% endblock %}
+{% block site_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'it42/call-board.css' %}">{% endblock %}
+{% block crumbs %}<li><a href="{% url 'grant_list' %}">Calls</a></li><li aria-current="page">Board</li>{% endblock %}
 {% block content %}
-<div class="it-toolbar">
-  <div>
-    <h1>Grant board</h1>
-    <p>Grants on the left, then every application by how far its review has come. Applications naming an administrating organisation wait for its signature first. Applicants see each status change.</p>
-  </div>
-  <div class="it-toolbar-actions">
-    <span class="it-sort-label">Sort by</span>
-    <nav class="it-segments" aria-label="Sort the board">
-      <a href="?sort=recent"{% if sort == "recent" %} aria-current="true"{% endif %}>{% icon "clock" %}Recent</a>
-      <a href="?sort=deadline"{% if sort == "deadline" %} aria-current="true"{% endif %}>{% icon "hourglass" %}Expiring</a>
+<header class="cb-header" data-call-board>
+  <div class="cb-row cb-title">
+    <h1>Call board</h1>
+    <nav class="cb-switch" aria-label="View">
+      <a href="{% querystring view=None %}"{% if not table %} aria-current="page"{% endif %}>Board</a>
+      <a href="{% querystring view='table' %}"{% if table %} aria-current="page"{% endif %}>Table</a>
     </nav>
-    {% if next_deadline %}<span class="it-chip-box"><span class="it-diamond" aria-hidden="true"></span>Next deadline · {{ next_deadline|date:"j M Y" }}</span>{% endif %}
-    {% if is_org_admin %}<a class="btn btn-primary" href="{% url 'grant_create' %}">{% icon "plus" %}New grant</a>{% endif %}
+    <button type="button" class="cb-control cb-push" popovertarget="board-stats">Stats</button>
+    {% if is_org_admin %}<a href="{% url 'grant_create' %}" class="btn btn-primary">{% icon "plus" %} New call</a>{% endif %}
   </div>
+  <form method="get" role="search" class="cb-search">
+    {% for key, value in request.GET.items %}{% if key != 'q' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+    <button type="submit" aria-label="Search the board">{% icon "magnifying-glass" %}</button>
+    <input type="search" name="q" value="{{ query }}" aria-label="Search by call, application ID or applicant" placeholder="Search by call, application ID or applicant">
+    {% if query %}<a href="{% querystring q=None %}" aria-label="Clear search">{% icon "x" %}</a>{% endif %}
+  </form>
+  <div class="cb-row cb-tabbar">
+    <nav aria-label="Work queues" class="cb-tabs">
+      {% for key, label, count in tabs %}
+        <a href="{% querystring tab=key %}"{% if key == tab %} aria-current="page"{% endif %}>{{ label }} <span>{{ count }}</span></a>
+      {% endfor %}
+      <a href="{% url 'grant_archive' %}">Archived</a>
+    </nav>
+    <button class="cb-help cb-push" type="button" popovertarget="board-help">{% icon "question" %} How the call board works</button>
+  </div>
+  <div class="cb-row cb-tools">
+    <a class="cb-control" href="{% if selecting %}{% querystring select=None %}{% else %}{% querystring select='1' %}{% endif %}">{% if selecting %}Done selecting{% else %}Select{% endif %}</a>
+    <details class="cb-menu"><summary class="cb-control">Sort {% icon "caret-down" %}</summary>
+      <nav aria-label="Sort cards">
+        <a href="{% querystring sort='recent' %}"{% if sort == 'recent' %} aria-current="true"{% endif %}>Recent</a>
+        <a href="{% querystring sort='deadline' %}"{% if sort == 'deadline' %} aria-current="true"{% endif %}>Expiring</a>
+        <a href="{% querystring sort='title' %}"{% if sort == 'title' %} aria-current="true"{% endif %}>Title</a>
+      </nav>
+    </details>
+    <nav class="cb-switch" aria-label="Group cards">
+      <a href="{% querystring group=None %}"{% if grouping == 'all' %} aria-current="true"{% endif %}>All</a>
+      <a href="{% querystring group='call' %}"{% if grouping == 'call' %} aria-current="true"{% endif %}>By call</a>
+      <a href="{% querystring group='workflow' %}"{% if grouping == 'workflow' %} aria-current="true"{% endif %}>By workflow</a>
+    </nav>
+    <details class="cb-menu cb-push"><summary class="cb-control">Status{% if status %} · {{ status }}{% endif %} {% icon "caret-down" %}</summary>
+      <nav aria-label="Filter by status">
+        <a href="{% querystring status=None %}"{% if not status %} aria-current="true"{% endif %}>All statuses</a>
+        {% for label in statuses %}<a href="{% querystring status=label %}"{% if status == label %} aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}
+      </nav>
+    </details>
+    <details class="cb-menu"><summary class="cb-control">Tags{% if tag %} · {{ tag_name }}{% endif %} {% icon "caret-down" %}</summary>
+      <nav aria-label="Filter by call tag">
+        <a href="{% querystring tag=None %}"{% if not tag %} aria-current="true"{% endif %}>All tags</a>
+        {% for value, label in tags %}<a href="{% querystring tag=value %}"{% if tag == value %} aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}
+      </nav>
+    </details>
+    <details class="cb-menu"><summary class="cb-control">Note to self{% if noted %} · Mine{% endif %} {% icon "caret-down" %}</summary>
+      <nav aria-label="Filter by personal note">
+        <a href="{% querystring notes=None %}"{% if not noted %} aria-current="true"{% endif %}>All cards</a>
+        <a href="{% querystring notes='mine' %}"{% if noted %} aria-current="true"{% endif %}>With my notes</a>
+      </nav>
+    </details>
+  </div>
+  {% if selecting %}
+  <form id="cb-selection" class="cb-selection cb-row" method="post" action="{% url 'board_action' %}{% querystring %}">
+    {% csrf_token %}<strong aria-live="polite" data-selection-count>Select cards</strong>
+    <button class="cb-control" name="action" value="archive">Archive applications</button>
+    {% if is_org_admin %}
+    <button class="cb-control" name="action" value="pause">Pause calls</button>
+    <button class="cb-control" name="action" value="resume">Resume calls</button>
+    <label>Call tag <select name="tag"><option value="">No tag</option>{% for value, label in tags %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <button class="cb-control" name="action" value="tag">Apply tag</button>
+    {% endif %}
+    <details><summary>Personal note</summary><label>Note for selected cards <input type="text" name="note" maxlength="2000"></label> <button class="cb-control" name="action" value="note">Save note</button></details>
+  </form>
+  {% endif %}
+</header>
+
+<div popover id="board-stats" class="cb-popover">
+  <button type="button" class="cb-close" popovertarget="board-stats" popovertargetaction="hide" aria-label="Close stats">{% icon "x" %}</button>
+  <h2>Board stats</h2><p>Cards matching your search and filters across all queues.</p>
+  <dl>{% for label, count in stats %}<div><dt>{{ label }}</dt><dd>{{ count }}</dd></div>{% endfor %}</dl>
+</div>
+<div popover id="board-help" class="cb-popover">
+  <button type="button" class="cb-close" popovertarget="board-help" popovertargetaction="hide" aria-label="Close help">{% icon "x" %}</button>
+  <h2>How the call board works</h2>
+  <p>Open a card to work on its call, application or review panel. Attention brings together staff actions, outstanding responses and panels to monitor.</p>
+  <p>Group cards by call or by the work involved. Open a card’s menu to save a private note. Pausing a call moves its card to the Paused tab until you resume it. Deadlines and reviews continue.</p>
+  <p>Drag a decided application to Send to archive, or choose Archive application now from its menu. Other decisions move to Archived after one month.</p>
 </div>
 
-<div class="it-board it-board-7" tabindex="0" role="region" aria-label="Grant board">
-  {% for column in columns %}
-    <section class="it-column it-column-{{ column.key }}" aria-labelledby="col-{{ column.key }}">
-      <div class="it-column-head">
-        <span class="it-column-dot" aria-hidden="true"></span>
-        <h2 id="col-{{ column.key }}">{{ column.title }}</h2>
-        <span class="it-count">{{ column.cards|length }}</span>
-        {% if column.key == "decided" %}<a class="it-column-add" href="{% url 'grant_archive' %}" aria-label="Archived applications" title="Archived applications">{% icon "archive" %}</a>{% endif %}
-        {% if column.key == "published" %}<a class="it-column-add" href="{% url 'grant_published' %}" aria-label="All published grants" title="All published grants">{% icon "arrow-up-right" %}</a>{% endif %}
-        {% if column.key == "draft" and is_org_admin %}<a class="it-column-add" href="{% url 'grant_create' %}" aria-label="New grant" title="New grant">{% icon "plus" %}</a>{% endif %}
-      </div>
-      <ul class="it-column-list">
-        {% for card in column.cards %}
-          <li>
-          {% if card.grant %}
-            {% with grant=card.grant %}
-            <article class="it-app-card">
+{% for section in sections %}
+  {% if section.name %}<h2 class="cb-group-title">{{ section.name }}</h2>{% endif %}
+  {% if table %}
+  <div class="table-responsive cb-table"><table class="table it-table align-middle">
+    <caption class="visually-hidden">{{ section.name|default:"Call board" }}</caption>
+    <thead><tr><th scope="col">Card</th><th scope="col">Status</th><th scope="col">Workflow</th><th scope="col">Next date / decision</th><th scope="col">Actions</th></tr></thead>
+    <tbody>{% for card in section.cards %}<tr>
+      <td>{% include "org/grants/_board_select.html" %}<a {% if card.embedded %}data-board-card {% endif %}href="{{ card.url }}">{{ card.title }}</a><small>{{ card.subtitle }}</small></td>
+      <td>{% include "includes/status_pill.html" with tone=card.tone label=card.badge %}</td>
+      <td>{{ card.workflow }}{% if card.progress %}<small>Reviews in · {{ card.progress.0 }} / {{ card.progress.1 }}</small>{% endif %}</td>
+      <td>{% if card.when %}{{ card.date_label }} {{ card.when|date:"j M Y" }}{% else %}—{% endif %}</td>
+      <td>{% include "org/grants/_board_menu.html" %}</td>
+    </tr>{% empty %}<tr><td colspan="5">No cards match this view.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="it-board cb-board" style="--it-board-columns: {{ section.columns|length }}" tabindex="0" role="region" aria-label="{{ section.name|default:'Call board' }}">
+    {% for column in section.columns %}
+      <section class="it-column cb-{{ column.key }}"{% if column.key == 'archive' %} data-archive-drop{% endif %}>
+        <div class="it-column-head"><span class="it-column-dot" aria-hidden="true"></span><h2>{{ column.title }}</h2>{% if column.key != 'archive' %}<span class="it-count">{{ column.cards|length }}</span>{% endif %}</div>
+        {% if column.key == 'archive' %}
+          <div class="cb-drop">{% icon "archive" %}<strong>All done here?</strong><span>Drag a decided application here to archive it.</span><a href="{% url 'grant_archive' %}">View archived applications</a></div>
+        {% else %}
+        <ul class="it-column-list">
+          {% for card in column.cards %}
+            <li><article class="it-app-card cb-card"{% if card.archivable %} draggable="true" data-archive-card{% endif %}>
               <div class="it-app-card-top">
-                {% if grant.status == "draft" %}{% include "includes/status_pill.html" with tone="grey" label="Unpublished" %}{% elif grant.status == "published" %}{% include "includes/status_pill.html" with tone="green" label="Published" %}{% else %}{% include "includes/status_pill.html" with tone="red" label="Closed" %}{% endif %}
-                {% if grant.today_count %}<span class="it-pill-today">+{{ grant.today_count }} today</span>{% endif %}
+                {% include "org/grants/_board_select.html" %}
+                {% include "includes/status_pill.html" with tone=card.tone label=card.badge %}
+                {% include "org/grants/_board_menu.html" %}
               </div>
-              <h3><a data-board-card href="{% if grant.status == 'draft' and is_org_admin %}{% url 'grant_edit' grant.pk %}{% else %}{% url 'grant_applications' grant.pk %}{% endif %}">{{ grant.title }}</a></h3>
-              {% if grant.status == "draft" %}
-              <div class="it-app-card-grant">
-                {% icon "hand-coins" %}
-                <div><strong>Grant call</strong><span>{{ ORG_NAME }}</span></div>
-              </div>
-              <div class="it-person"><span class="it-avatar it-avatar-sm" aria-hidden="true">{{ grant.created_by.get_full_name|default:grant.created_by.username|initials }}</span>{{ grant.created_by.get_full_name|default:grant.created_by.username }}</div>
-              <div class="it-app-card-foot">
-                <span class="it-meta">{% icon "calendar-blank" %}Closes {{ grant.deadline|date:"j M" }}</span>
-                <span class="it-meta" title="Applications">{% icon "file-text" %}{{ grant.application_count }}</span>
-              </div>
-              {% else %}
-              <p class="it-app-card-sub">Grant call · {{ ORG_NAME }}</p>
-              <dl class="it-tiles">
-                <div><dt>Applications</dt><dd>{{ grant.application_count }}</dd></div>
-                <div><dt>Panels</dt><dd>{{ card.panels }}</dd></div>
-              </dl>
-              <div class="it-app-card-foot">
-                <span class="it-meta">{% icon "calendar-blank" %}{% if grant.status == "closed" %}Closed{% else %}Closes{% endif %} {{ grant.deadline|date:"j M" }}</span>
-                <span class="it-meta">{{ card.reviewers }} reviewer{{ card.reviewers|pluralize }}</span>
-              </div>
+              <h3><a {% if card.embedded %}data-board-card {% endif %}href="{{ card.url }}">{{ card.title }}</a></h3>
+              <p>{{ card.subtitle }}</p>
+              {% if card.progress %}
+                <div class="cb-progress"><span>Reviews in</span><strong>{{ card.progress.0 }} / {{ card.progress.1 }}</strong>
+                  <progress aria-label="Reviews in" value="{{ card.progress.0 }}" max="{{ card.progress.1|default:1 }}"></progress>
+                </div>
+                <small>Next important date</small>
               {% endif %}
-            </article>
-            {% endwith %}
-          {% else %}
-            {% with app=card.application %}
-            <article class="it-app-card">
-              <div class="it-app-card-top">
-                <span data-status="{{ app.status }}">{% status_pill app.status %}</span>
-              </div>
-              <h3><a data-board-card href="{% url 'application_detail' app.pk %}">{{ app.applicant_name }}</a></h3>
-              <div class="it-app-card-grant">
-                {% icon "hand-coins" %}
-                <div><strong>{{ app.grant.title }}</strong><span>{{ app.applicant_email|default:"Grant call" }}</span></div>
-              </div>
-              {% if app.research_org %}
-                <div class="it-person">{% icon "buildings" %}{{ app.research_org|research_org_name }}</div>
-              {% endif %}
-              {% if app.open_questions %}
-                <div class="it-waiting">{% icon "hourglass" %}<div><strong>Waiting for the applicant</strong><span>{{ app.open_questions }} open question{{ app.open_questions|pluralize }}</span></div></div>
-              {% endif %}
-              <div class="it-app-card-foot">
-                <span class="it-meta">{% icon "calendar-blank" %}{% if column.key == "assigned" %}{{ card.assigned }} reviewer{{ card.assigned|pluralize }}{% elif column.key == "signing" %}Sign by {{ app.grant.signature_deadline|date:"j M" }}{% else %}Received {{ app.received_at|date:"j M" }}{% endif %}</span>
-                <span class="it-meta" title="Questions to the applicant">{% icon "chat-circle" %}{{ app.question_count }}</span>
-              </div>
-            </article>
-            {% endwith %}
-          {% endif %}
-          </li>
-        {% empty %}
-          <li class="it-column-empty">{% if column.key == "draft" %}No drafts.{% if is_org_admin %} <a href="{% url 'grant_create' %}">Create a grant</a>.{% endif %}{% elif column.key == "published" %}No published grants yet.{% else %}Nothing here.{% endif %}</li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endfor %}
-</div>
+              {% if card.when %}<div class="cb-date">{% icon "calendar-blank" %} {{ card.date_label }} <time datetime="{{ card.when|date:'Y-m-d' }}">{{ card.when|date:"j M" }}</time></div>
+              {% elif card.progress %}<small>No milestone scheduled</small>{% endif %}
+              {% if card.note %}<div class="cb-note">{% icon "note-pencil" %} {{ card.note }}</div>{% endif %}
+            </article></li>
+          {% empty %}
+            <li class="it-column-empty">{% if column.key == 'paused' %}<strong>Nothing in here yet</strong><br>Paused calls show up here until you resume them.{% else %}No matching cards.{% endif %}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endfor %}
+<script defer src="{% static 'it42/call-board.js' %}"></script>
 {% endblock %}
 {% block panel %}
 <aside class="it-panel" aria-label="Notifications and calendar">

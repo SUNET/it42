@@ -5,19 +5,27 @@
 {% block content %}
 <div class="it-toolbar">
   <div>
-    <h1>Review panels</h1>
-    <p>Each panel reviews the applications of the grants attached to it. Reviewers work on the reviewer site.</p>
+    <h1>Review panels{% if grant %} · {{ grant.title }}{% endif %}</h1>
+    <p>{% if grant and is_org_admin %}Attach this call to an existing panel or create a new one.{% else %}Each panel reviews the applications of the grants attached to it. Reviewers work on the reviewer site.{% endif %}</p>
   </div>
-  {% if is_org_admin %}<div class="it-toolbar-actions"><a class="btn btn-primary" href="{% url 'panel_create' %}">{% icon "plus" %}New panel</a></div>{% endif %}
+  {% if is_org_admin %}<div class="it-toolbar-actions"><a class="btn btn-primary" href="{% if grant %}{% url 'call_panel_create' grant.pk %}{% else %}{% url 'panel_create' %}{% endif %}">{% icon "plus" %}New panel</a></div>{% endif %}
 </div>
 <div class="it-panel-grid">
   {% for panel in panels %}
+    {% if grant %}<div>{% endif %}
     <a class="it-panel-card it-panel-card-link" data-board-card href="{% url 'panel_detail' panel.pk %}">
       <h2 class="it-panel-card-title">{{ panel.name }}</h2>
       <p class="it-panel-card-sub">{{ panel.seat_count }} seat{{ panel.seat_count|pluralize }} · {{ panel.grant_count }} grant{{ panel.grant_count|pluralize }}</p>
       {% if panel.description %}<p class="it-card-note">{{ panel.description|truncatewords:24 }}</p>{% endif %}
       <span class="it-panel-card-open">Open panel {% icon "arrow-right" %}</span>
     </a>
+    {% if grant %}
+      {% if panel.pk in linked %}<span class="it-meta">Attached to this call</span>
+      {% elif is_org_admin %}<form method="post" action="{% url 'panel_grant_link' panel.pk %}">{% csrf_token %}
+        <input type="hidden" name="grant_id" value="{{ grant.pk }}">
+        <button class="btn btn-sm btn-outline-primary mt-2" type="submit">Attach call to {{ panel.name }}</button>
+      </form>{% endif %}
+    </div>{% endif %}
   {% empty %}
     <p class="it-files-empty">No panels yet.{% if is_org_admin %} Create one, add people by email and attach the grants it reviews.{% endif %}</p>
   {% endfor %}

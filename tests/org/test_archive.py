@@ -30,24 +30,19 @@ def test_decision_moves_from_board_to_archive(
     assert application.decided_at == when
     assert application.archive_at == due
 
-    def board_ids() -> list[int]:
-        columns = member_client.get("/").context["columns"]
-        return [
-            card["application"].pk
-            for col in columns
-            for card in col["cards"]
-            if "application" in card
-        ]
+    def on_board() -> bool:
+        """Check the card link staff can open from the default board."""
+        return f'data-board-card href="{detail}"' in member_client.get("/").content.decode()
 
     before = due - timedelta(microseconds=1)
     monkeypatch.setattr(timezone, "now", lambda: before)
     admin_client.post(detail + "questions/", {"text": "Any update?"})
     admin_client.post(detail + "status/", {"status": outcome})
-    assert application.pk in board_ids()
+    assert on_board()
     assert not member_client.get("/grants/archive/").context["applications"]
 
     monkeypatch.setattr(timezone, "now", lambda: due)
-    assert application.pk not in board_ids()
+    assert not on_board()
     archive = member_client.get("/grants/archive/")
     assert list(archive.context["applications"]) == [application]
     assert b"Decision by staff9" in archive.content
@@ -60,7 +55,7 @@ def test_decision_moves_from_board_to_archive(
     assert str(application.decided_by) == "staff1"
     assert application.decided_at == due
     assert application.archive_at == archive_time(due)
-    assert application.pk in board_ids()
+    assert on_board()
     admin_client.post(detail + "status/", {"status": "under_review"})
     application.refresh_from_db()
     assert application.decided_by is application.decided_at is application.archive_at is None

@@ -6,6 +6,8 @@ from . import views
 
 urlpatterns = [
     path("", views.panel_list, name="panel_list"),
+    path("for-call/<int:grant_id>/", views.panel_list, name="call_panels"),
+    path("for-call/<int:grant_id>/new/", views.panel_create, name="call_panel_create"),
     path("new/", views.panel_create, name="panel_create"),
     path("<int:panel_id>/", views.panel_detail, name="panel_detail"),
     path("<int:panel_id>/edit/", views.panel_edit, name="panel_edit"),
