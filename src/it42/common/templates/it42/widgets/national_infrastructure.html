@@ -1,0 +1,22 @@
+<fieldset class="it-infrastructure" data-infrastructure>
+  <legend class="form-label fs-6">Do you plan to use national infrastructures financed by VR?</legend>
+  <label class="form-check form-check-inline">
+    <input class="form-check-input" type="radio" id="{{ widget.attrs.id }}_yes" name="{{ widget.name }}.use" value="yes"{% if answer.use == "yes" %} checked{% endif %}{% if widget.attrs.required %} required{% endif %}> Yes
+  </label>
+  <label class="form-check form-check-inline">
+    <input class="form-check-input" type="radio" id="{{ widget.attrs.id }}_no" name="{{ widget.name }}.use" value="no"{% if answer.use == "no" %} checked{% endif %}{% if widget.attrs.required %} required{% endif %}> No
+  </label>
+  <div class="it-infrastructure-details mt-2">
+    <details>
+      <summary class="form-select">Select the national infrastructures you plan to use</summary>
+      <div class="it-infrastructure-options border rounded p-2">
+        {% for name in names %}
+          <label class="form-check"><input class="form-check-input" type="checkbox" name="{{ widget.name }}.selected" value="{{ name }}"{% if name in answer.selected %} checked{% endif %}> {{ name }}</label>
+        {% endfor %}
+        <label class="form-check"><input class="form-check-input" type="checkbox" name="{{ widget.name }}.selected" value="{{ other_label }}" data-other-choice{% if other_label in answer.selected %} checked{% endif %}> {{ other_label }}</label>
+      </div>
+    </details>
+    <label class="form-label mt-3" for="{{ widget.attrs.id }}_other">Other infrastructures you plan to use</label>
+    <textarea class="form-control" id="{{ widget.attrs.id }}_other" name="{{ widget.name }}.other" rows="2" maxlength="{{ max_other }}">{{ answer.other }}</textarea>
+  </div>
+</fieldset>

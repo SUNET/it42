@@ -356,6 +356,7 @@
         if (options.length > 5) nodes.push(el("div", { class: "fb-more", text: "+" + (options.length - 5) + " more" }));
         return el("div", {}, nodes);
       }
+      case "national_infrastructure":
       case "checkbox":
         return el("div", {class: "fb-yesno"}, ["Yes", "No"].map(answer =>
           el("label", {class: "form-check"}, [el("input", {type: "radio", class: "form-check-input", disabled: true}), el("span", {text: answer})])

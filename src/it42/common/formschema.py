@@ -37,6 +37,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 
 from . import research_orgs
+from .infrastructure import InfrastructureField, display_infrastructure
 
 MAX_FIELDS = 30
 MAX_OPTIONS = 50
@@ -155,6 +156,13 @@ WIDGETS: dict[str, dict[str, Any]] = {
         "group": "Choices",
         "keys": (),
         "palette": False,
+    },
+    "national_infrastructure": {
+        "label": "National Infrastructure",
+        "hint": "Use of national infrastructures financed by VR",
+        "icon": "buildings",
+        "group": "Grant",
+        "keys": (),
     },
     "budget": {
         "label": "Budget",
@@ -653,6 +661,8 @@ def _form_field(spec: dict[str, Any]) -> forms.Field:
                 validators=validators,
                 **common,
             )
+        case "national_infrastructure":
+            return InfrastructureField(**common)
         case "budget":
             return BudgetField(
                 currency=spec["currency"],
@@ -789,6 +799,8 @@ def labelled_answers(
         value = answers.get(spec["name"])
         if spec["type"] == "research_org":
             out.append((spec["label"], research_orgs.name_of(value) if value else "None"))
+        elif spec["type"] == "national_infrastructure":
+            out.append((spec["label"], display_infrastructure(value)))
         elif spec["type"] == "budget":
             out.append((spec["label"], display_budget(value, spec.get("currency", "SEK"))))
         else:

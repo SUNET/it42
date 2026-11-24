@@ -1,0 +1,84 @@
+NAISS - National Academic Infrastructure for Supercomputing in Sweden
+NGI – National Genomics Infrastructure
+NBIS – National Bioinformatics Infrastructure Sweden
+MAX IV-laboratoriet
+BIS – Biobank Sverige
+BioMS – Swedish national infrastructure for biological mass spectrometry
+Myfab - The Swedish Research Infrastructure for Micro and Nano Fabrication
+NMI – Nationell infrastruktur för mikroskopi inom livsvetenskaperna
+CBCS Kemiskt-biologiskt konsortium
+SwedNMR -  infrastruktur för kärnmagnetisk resonans
+ARTEMI - Nationell Forskningsinfrastruktur för Elektronmikroskopi
+ESRF – European Synchrotron Radiation Facility
+Kliniska Studier Sverige - Forum Söder
+Proteinproduktion Sverige
+MONA - Microdata On-Line Access
+Kliniska Studier Sverige - Forum Stockholm-Gotland
+SND - Svensk nationell datatjänst
+InfraVis - nationell forskningsinfrastruktur för visualisering av data
+Kliniska Studier Sverige - Gothia Forum
+HUMINFRA - Nationell infrastruktur för digital humaniora
+ISIS Neutron Spallation Source
+Petra III (SMS P21)
+ILL - Institut Laue-Langevin
+EuroHPC
+ESS – European Spallation Source
+SITES – Swedish Infrastructure for Ecosystem Science
+RUT (Register Utilizer Tool)
+STR – Svenska Tvillingregistret
+EMBL – European Molecular Biology Laboratory
+Kliniska Studier Sverige - Forum Mellansverige
+Kliniska Studier Sverige - Forum Norr
+Nordsim-Vegacenter
+SIMPLER – Swedish Infrastructure for Medical Population-based Life-course and Environmental Research
+Kliniska Studier Sverige - Forum Sydost
+SveDigArk - Svensk nationell infrastruktur i digital arkeologi
+BBMRI-ERIC – Biobanking and Biomolecular Resources Research Infrastructure
+GBIF - Global Biodiversity Information Facility
+NEAR - National E-Infrastructure for Ageing Research
+PRACE – Partnerskap för avancerade beräkningar i Europa
+European XFEL - European X-ray Free Electron Laser
+DEMSCORE - infrastruktur för kontextdata inom samhällsvetenskap
+SBDI – Svensk Biodiversitetsdatainfrastruktur
+Elixir - A distributed infrastructure for life-science information
+Nationella språkbanken och Swe-Clarin
+ICOS och ICOS-ERIC – Integrated Carbon Observation System
+Jonteknologiskt centrum
+SWEDPOP - Swedish population databases for research
+CERN - European Organization for Nuclear Research
+ArchLab - Infrastructure for Archaelogical Science Labs
+REWHARD - RElations, Work and Health across the life-course - A Research Data infrastructure
+Eurobioimaging ERIC - The European Research Infrastructure for Imaging Technologies in Biological and Biomedical Sciences
+ESO – Europeiska sydobservatoriet
+ACTRIS och ACTRIS-ERIC - Aerosols, Clouds and Trace Gases Research Infrastructure
+CLARIN-ERIC (European Research Infrastructure for Language Resources and Technology)
+SWERVE - Svensk forskningsfartygsinfrastruktur för havsforskning
+Super-Adam (neutronreflektometer vid ILL)
+CORS - Comparative Research Center Sweden
+EATRIS-ERIC – European Advanced Translational Research Infrastructure in Medicine
+ESS-ERIC – European Social Survey
+Isbrytaren Oden
+Onsala rymdobservatorium
+WLCG - Worldwide LHC Computing Grid
+EU-OPENSCREEN ERIC
+ATLAS - A Toroidal LHC Apparatus
+EMBRC ERIC - European Marine Biology Resource Centre
+FAIR – Facility for Antiproton and Ion Research
+DESIREE - Double ElectroStatic Ion Ring ExpEriment
+CeXS
+NeIC – Nordic e-Infrastructure Collaboration
+UGU - Utvärdering Genom Uppföljning /ETF (Evaluation Through Follow-up)
+EUROfusion
+EISCAT - European Incoherent Scatter Scientific Association
+SHARE-ERIC - Survey of Health, Ageing and Retirement in Europe
+CESSDA-ERIC - Consortium of European Social Science Data Archives
+EPOS ERIC - European Plate Observing System
+ISOLDE - The Isotope mass Separator On-Line facility
+SKAO – Square Kilometre Array Observatory
+ALICE - A Large Ion Collider Experiment
+IODP - Integrated Ocean Drilling Program
+ICDP - International Continental Scientific Drilling Program
+LOFAR - LOw Frequency Array
+SST - det svenska solteleskopet
+IceCube - South Pole Neutrino Observatory
+ECORD-The European Consortium for Ocean Research Drilling

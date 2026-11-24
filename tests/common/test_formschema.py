@@ -66,6 +66,7 @@ EVERY_TYPE = [
     {"name": "topics", "label": "Topics", "type": "checkboxes", "options": ["AI", "Bio", "Sea"]},
     {"name": "agree", "label": "I agree", "type": "checkbox", "required": True},
     {"name": "org", "label": "Organisation", "type": "research_org", "required": True},
+    {"name": "facilities", "label": "National Infrastructure", "type": "national_infrastructure"},
     {
         "name": "costs",
         "label": "Budget breakdown",
@@ -122,7 +123,7 @@ def test_every_widget_type_validates_and_keeps_its_options() -> None:
         "type": "heading",
         "required": False,
     }
-    assert fields[17] == {
+    assert fields[18] == {
         "name": "costs",
         "label": "Budget breakdown",
         "type": "budget",
@@ -132,7 +133,7 @@ def test_every_widget_type_validates_and_keeps_its_options() -> None:
         "max_lines": 3,
         "description": "List the costs you are asking us to cover",
     }
-    assert fields[19]["url"] == "https://formas.se/x"
+    assert fields[20]["url"] == "https://formas.se/x"
     # A budget always carries its currency; a link's url may wait until publishing.
     budget, link = validate_schema(
         [

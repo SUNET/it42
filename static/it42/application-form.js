@@ -11,6 +11,18 @@
   }
   function controlsOf(question) { return [...question.querySelectorAll("input, textarea, select")].filter(el => !el.disabled); }
   function state(question) {
+    // A Yes answer is complete with listed choices, free text, or both.
+    const infrastructure = question.querySelector("[data-infrastructure]");
+    if (infrastructure) {
+      const use = infrastructure.querySelector("input[type=radio]:checked")?.value;
+      const other = infrastructure.querySelector("textarea");
+      const selected = infrastructure.querySelector("input[type=checkbox]:checked");
+      const needsName = infrastructure.querySelector("[data-other-choice]:checked");
+      // The submit dialog also reads required controls for its checklist.
+      other.required = use === "yes" && (!selected || !!needsName);
+      const detailsComplete = !other.required || !!other.value.trim();
+      return {started: !!use, done: use === "no" || (use === "yes" && detailsComplete)};
+    }
     const controls = controlsOf(question);
     const groups = new Map();
     let started = false, valid = true;

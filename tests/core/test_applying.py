@@ -574,3 +574,65 @@ def test_escape_closes_organisation_list_before_card(u2_client, a2, make_grant) 
         assert organisation.get_attribute("aria-expanded") == "false"
         organisation.press("Escape")
         dialog.wait_for(state="hidden")
+
+
+def test_infrastructure_draft_and_submission(
+    u2_client: Client, make_grant: Callable[..., PublicGrant]
+) -> None:
+    """Resume a compound draft, submit it and read the names in the application copy."""
+    grant = make_grant(
+        form_schema=[
+            {"name": "facilities", "label": "Facilities", "type": "national_infrastructure"}
+        ]
+    )
+    url = f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/"
+    data = {
+        "facilities.use": "yes",
+        "facilities.selected": ["CeXS", "EuroHPC"],
+        "facilities.other": "Additional facility",
+    }
+    assert u2_client.post(url, {"autosave": "1", **data}).status_code == 200
+    body = u2_client.get(url).content.decode()
+    assert 'value="yes" checked' in body
+    assert 'value="CeXS" checked' in body and 'value="EuroHPC" checked' in body
+    assert "Additional facility</textarea>" in body
+
+    response = apply(u2_client, grant, **data)
+    assert response.status_code == 302
+    answer = ApplicationCopy.objects.get().answers["facilities"]
+    assert answer == {"use": "yes", "selected": ["CeXS", "EuroHPC"], "other": "Additional facility"}
+    assert OutboxEvent.objects.get().payload["answers"]["facilities"] == answer
+    body = u2_client.get(response["Location"]).content.decode()
+    assert "Yes<br>CeXS<br>EuroHPC<br>Additional facility" in body
+
+
+@pytest.mark.django_db(transaction=True)
+def test_infrastructure_follow_up_and_progress(u2_client, make_grant) -> None:
+    """Switch branches and complete the required question with listed or unlisted names."""
+    grant = make_grant(
+        form_schema=[
+            {
+                "name": "facilities",
+                "label": "Facilities",
+                "type": "national_infrastructure",
+                "required": True,
+            }
+        ]
+    )
+    with board_browser(u2_client) as page:
+        page.goto(f"/grants/{grant.org_slug}/{grant.grant_public_id}/apply/")
+        question = page.locator("[data-infrastructure]")
+        dropdown = question.locator("summary")
+        status = page.locator("[data-question-state]")
+        assert not dropdown.is_visible() and status.inner_text() == "Required"
+        question.locator('[value="yes"]').check()
+        assert dropdown.is_visible() and status.inner_text() == "In progress"
+        dropdown.click()
+        question.get_by_label("CeXS", exact=True).check()
+        assert status.inner_text() == "Answered"
+        question.get_by_label("Other, specify below").check()
+        assert status.inner_text() == "In progress"
+        question.locator("textarea").fill("Unlisted facility")
+        assert status.inner_text() == "Answered"
+        question.locator('[value="no"]').check()
+        assert not dropdown.is_visible() and status.inner_text() == "Answered"
