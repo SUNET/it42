@@ -230,7 +230,7 @@ def check_grants(staff1: Browser, staff2: Browser) -> None:
     ):
         browser.login(site, subject)  # ORG_BOOTSTRAP_ADMINS in env/<org>.env makes them admins
         check(
-            "Grant board" in browser.get(f"https://{site}/").body,
+            "Call board" in browser.get(f"https://{site}/").body,
             f"{subject} is an admin on {site} by default",
         )
     ensure_grant(

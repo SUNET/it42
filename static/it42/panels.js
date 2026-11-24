@@ -5,6 +5,7 @@
   const compact = window.matchMedia("(max-width: 1399.98px)");
 
   document.querySelectorAll(".it-app").forEach(function (app) {
+    const callBoard = Boolean(app.querySelector("[data-call-board]"));
     const bar = app.querySelector(".it-topbar");
     app.querySelectorAll(":scope > .it-sidebar, :scope > .it-panel").forEach(function (panel) {
       const button = panel.querySelector(".it-panel-toggle");
@@ -22,7 +23,7 @@
       });
 
       function render() {
-        const collapsed = preference ? preference === "hidden" : right && compact.matches;
+        const collapsed = preference ? preference === "hidden" : callBoard || (right && compact.matches);
         if (right) {
           if (narrow.matches && button.parentNode !== bar) bar.append(button);
           if (!narrow.matches && button.parentNode !== panel) panel.prepend(button);

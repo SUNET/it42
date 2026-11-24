@@ -254,4 +254,4 @@ def test_unsigned_applications_cannot_be_reviewed(
     body = admin_client.get(f"/applications/{waiting.pk}/").content.decode()
     assert 'data-signoff="awaiting_signature"' in body
     assert "Set the status" not in body and "Send to applicant" not in body
-    assert "Awaiting signature" in admin_client.get("/").content.decode()
+    assert "Waiting for sign-off" in admin_client.get("/").content.decode()

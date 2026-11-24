@@ -7,6 +7,7 @@ from . import views
 urlpatterns = [
     path("", views.grant_list, name="grant_list"),
     path("new/", views.grant_create, name="grant_create"),
+    path("board/action/", views.board_action, name="board_action"),
     path("archive/", views.archive, name="grant_archive"),
     path("drafts/", views.grant_drafts, name="grant_drafts"),
     path("published/", views.published, name="grant_published"),
